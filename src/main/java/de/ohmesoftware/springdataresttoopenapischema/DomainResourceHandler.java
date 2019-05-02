@@ -24,14 +24,15 @@ public class DomainResourceHandler extends ResourceHandler {
     /**
      * Constructor.
      *
+     * @param sourceFile The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      */
-    protected DomainResourceHandler(String sourcePath, String basePath, CompilationUnit compilationUnit) {
-        super(sourcePath, basePath, compilationUnit);
+    protected DomainResourceHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+        super(sourceFile, sourcePath, basePath, compilationUnit);
         resourceMethodHandlers = new ArrayList<>();
-        resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 
     @Override
@@ -52,11 +53,11 @@ public class DomainResourceHandler extends ResourceHandler {
                 // add JAX-RS path annotation
                 addPathAnnotation(classOrInterfaceDeclaration, resourcePath);
                 addAllOperations();
-            }
-            try (FileWriter fileWriter = new FileWriter(new File(sourcePath))) {
-                fileWriter.write(compilationUnit.toString());
-            } catch (IOException e) {
-                throw new RuntimeException(String.format("Could not write soruce file: %s", sourcePath), e);
+                try (FileWriter fileWriter = new FileWriter(new File(sourceFile))) {
+                    fileWriter.write(compilationUnit.toString());
+                } catch (IOException e) {
+                    throw new RuntimeException(String.format("Could not write soruce file: %s", sourcePath), e);
+                }
             }
         }
     }

@@ -164,7 +164,7 @@ public class Enricher {
         LOGGER.info(String.format("Handling file: '%s'", path.getFileName().toString()));
         CompilationUnit compilationUnit = ResourceHandler.parseFile(path.toFile());
         String basePath = ResourceHandler.getBaseSourcePath(compilationUnit, sourcePath);
-        DomainResourceHandler domainResourceHandler = new DomainResourceHandler(sourcePath, basePath, compilationUnit);
+        DomainResourceHandler domainResourceHandler = new DomainResourceHandler(path.toString(), sourcePath, basePath, compilationUnit);
         domainResourceHandler.addResourceAnnotations();
     }
 

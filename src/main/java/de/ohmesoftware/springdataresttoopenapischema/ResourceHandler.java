@@ -6,7 +6,10 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.comments.Comment;
-import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.Expression;
+import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
@@ -52,6 +55,11 @@ public abstract class ResourceHandler {
     private static final String JAVADOC_PARAM_TAG = "param";
 
     /**
+     * The source file.
+     */
+    protected String sourceFile;
+
+    /**
      * The source path of the Java sources.
      */
     protected String sourcePath;
@@ -71,11 +79,13 @@ public abstract class ResourceHandler {
     /**
      * Constructor.
      *
+     * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      */
-    protected ResourceHandler(String sourcePath, String basePath, CompilationUnit compilationUnit) {
+    protected ResourceHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+        this.sourceFile = sourceFile;
         this.sourcePath = sourcePath;
         this.compilationUnit = compilationUnit;
         this.basePath = basePath;
@@ -110,7 +120,7 @@ public abstract class ResourceHandler {
                                  ClassOrInterfaceType extent) {
         String className = getFullClassName(compilationUnit, extent);
         // get File
-        String sourcePath = basePath + className + JAVA_EXT;
+        String sourcePath = basePath + className.replace('.', '/') + JAVA_EXT;
         return new File(sourcePath);
     }
 
@@ -127,6 +137,8 @@ public abstract class ResourceHandler {
             case "Float":
             case "Boolean":
                 return String.class.getPackage().getName() + DOT + className;
+            case "Optional":
+                return Optional.class.getPackage().getName() + DOT + className;
         }
         return compilationUnit.getImports().stream().filter(i -> !i.isAsterisk() && i.getName().getIdentifier().endsWith(className)).
                 map(i -> i.getName().asString()).findFirst().orElseThrow(() -> new RuntimeException(
@@ -157,7 +169,7 @@ public abstract class ResourceHandler {
 
     protected String getSimpleNameFromClass(String fqClassName) {
         String[] packages = fqClassName.split("\\.");
-        return packages[packages.length-1];
+        return packages[packages.length - 1];
     }
 
     protected ClassOrInterfaceType getClassOrInterfaceTypeFromClassName(CompilationUnit compilationUnit, String className) {
@@ -234,7 +246,7 @@ public abstract class ResourceHandler {
     }
 
     protected void addPathAnnotation(BodyDeclaration<?> bodyDeclaration, String path) {
-        bodyDeclaration.addSingleMemberAnnotation(RESOURCE_PATH, new NameExpr(path));
+        bodyDeclaration.addSingleMemberAnnotation(JAXRS_PATH_CLASS, new NameExpr(quoteString(path)));
     }
 
     // Resource annotations
@@ -279,12 +291,15 @@ public abstract class ResourceHandler {
 
     // javadoc
 
+    protected String quoteString(String string) {
+        return QUOTATION_MARK_STRING + string + QUOTATION_MARK_STRING;
+    }
+
     protected String escapeString(String string) {
-        return QUOTATION_MARK_STRING +
-                string.trim().replace("\n", SPACE_STRING).
-                        replace("\r", EMPTY_STRING).
-                        replace("\"", "\\\"").
-                        replaceAll("\\s+", SPACE_STRING) + QUOTATION_MARK_STRING;
+        return string.trim().replace("\n", SPACE_STRING).
+                replace("\r", EMPTY_STRING).
+                replace("\"", "\\\"").
+                replaceAll("\\s+", SPACE_STRING);
     }
 
     protected Javadoc getJavadoc(BodyDeclaration bodyDeclaration) {
@@ -293,7 +308,7 @@ public abstract class ResourceHandler {
 
     protected String getJavadocParameter(Javadoc javadoc, String parameter) {
         return javadoc.getBlockTags().stream().filter(t -> t.getTagName() != null && t.getTagName().equals(JAVADOC_PARAM_TAG)
-        && t.getName().isPresent() && t.getName().get().equals(parameter)).
+                && t.getName().isPresent() && t.getName().get().equals(parameter)).
                 map(t -> t.getContent().toText().trim()).findFirst().orElse(null);
     }
 
@@ -303,11 +318,11 @@ public abstract class ResourceHandler {
 
     protected String getJavadocSummary(String javadoc) {
         String[] commentParts = javadoc.split("<p>");
-        return commentParts[0];
+        return commentParts[0].trim();
     }
 
     protected String getJavadocDescription(String javadoc) {
         String[] commentParts = javadoc.split("<p>");
-        return commentParts.length > 1 ? commentParts[1] : null;
+        return commentParts.length > 1 ? commentParts[1].trim() : null;
     }
 }

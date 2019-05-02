@@ -1,8 +1,6 @@
 package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
@@ -10,6 +8,7 @@ import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.Collections;
+import java.util.Optional;
 
 /**
  * Resource method handler for findById.
@@ -20,16 +19,18 @@ import java.util.Collections;
 public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
 
     private static final String FIND_BY_ID_METHOD = "findById";
+    private static final String FIND_BY_ID_PARAM = "id";
 
     /**
      * Constructor.
      *
+     * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      */
-    protected FindByIdResourceMethodHandler(String sourcePath, String basePath, CompilationUnit compilationUnit) {
-        super(sourcePath, basePath, compilationUnit);
+    protected FindByIdResourceMethodHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+        super(sourceFile, sourcePath, basePath, compilationUnit);
     }
 
     @Override
@@ -48,11 +49,11 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
 
     private void removeFindByOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD, String.class.getSimpleName());
-        removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
-        removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
-        removeCrudOperation(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
-        removeJaxRsImports(compilationUnit);
-        removeOperations(compilationUnit);
+        if (methodDeclaration != null) {
+            removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
+            removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
+            removeCrudOperation(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
+        }
     }
 
     private void addFindByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
@@ -62,13 +63,12 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
             ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
             if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 ClassOrInterfaceType idClass = getIDClass(compilationUnit, classOrInterfaceDeclaration);
-                methodDeclaration = classOrInterfaceDeclaration.addMethod(FIND_BY_ID_METHOD, Modifier.Keyword.PUBLIC).setParameters(
-                        new NodeList<>(Collections.singletonList(new Parameter(
-                                idClass, "id")))).setType(domainClassOrInterfaceType);
+                methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
+                        FIND_BY_ID_METHOD, getOptionalWrapper(domainClassOrInterfaceType), new Parameter(
+                                idClass, FIND_BY_ID_PARAM));
             }
         }
         if (methodDeclaration == null) {
-            removeFindByOperation(compilationUnit, classOrInterfaceDeclaration);
             return;
         }
         NormalAnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD,
@@ -85,21 +85,19 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
             }
         }
         if (exported) {
-            // clean annotations in case of an update
-            removeJaxRsAnnotations(compilationUnit, methodDeclaration);
-            removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
             if (methodPath != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }
-            addPathParamAnnotation(methodDeclaration, methodPath, true);
+            addPathParamAnnotation(methodDeclaration, FIND_BY_ID_PARAM, true, "The database id.");
             addGETAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration, createRequestBodyAnnotation(compilationUnit,
                     classOrInterfaceDeclaration),
                     Collections.singletonList(
-                            createApiResponseAnnotation200WithContent(compilationUnit, classOrInterfaceDeclaration)));
-        } else {
-            // remove and method
-            removeFindByOperation(compilationUnit, classOrInterfaceDeclaration);
+                            createApiResponseAnnotation200WithContent(compilationUnit,
+                                    classOrInterfaceDeclaration)),
+                    String.format("Gets a(n) %s by its id.",
+                            getSimpleNameFromClass(
+                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
         }
     }
 

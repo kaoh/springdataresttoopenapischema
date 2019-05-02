@@ -1,6 +1,7 @@
 package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
@@ -62,12 +63,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     /**
      * Constructor.
      *
+     * @param sourceFile The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      */
-    protected ResourceMethodHandler(String sourcePath, String basePath, CompilationUnit compilationUnit) {
-        super(sourcePath, basePath, compilationUnit);
+    protected ResourceMethodHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+        super(sourceFile, sourcePath, basePath, compilationUnit);
     }
 
     public abstract void addResourceAnnotations();
@@ -86,6 +88,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return prevName;
     }
 
+    protected ClassOrInterfaceType getOptionalWrapper(ClassOrInterfaceType classOrInterfaceType) {
+        return getClassOrInterfaceTypeFromClassName(compilationUnit,
+                Optional.class.getName()).setTypeArguments(classOrInterfaceType);
+    }
+
     // annotations
 
     protected void addMarkerAnnotation(BodyDeclaration<?> bodyDeclaration,
@@ -95,27 +102,20 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     // Operation annotations
 
-    protected void removeOperations(CompilationUnit compilationUnit) {
-        removeImport(compilationUnit, OPERATION_ANNOTATION_CLASS);
-        removeImport(compilationUnit, SCHEMA_ANNOTATION_CLASS);
-        removeImport(compilationUnit, PARAMETER_CLASS);
-        removeImport(compilationUnit, API_RESPONSE_CLASS);
-        removeImport(compilationUnit, REQUEST_BODY_CLASS);
-        removeImport(compilationUnit, CONTENT_ANNOTATION_CLASS);
+    protected void addPathParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required,
+                                          String defaultParamDescription) {
+        addParameterAnnotation(methodDeclaration, parameterName, JAXRS_PATH_PARAM_CLASS, required, defaultParamDescription);
     }
 
-    protected void addPathParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required) {
-        addParameterAnnotation(methodDeclaration, parameterName, JAXRS_PATH_PARAM_CLASS, required);
-    }
-
-    protected void addQueryParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required) {
-        addParameterAnnotation(methodDeclaration, parameterName, JAXRS_QUERY_PARAM_CLASS, required);
+    protected void addQueryParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required,
+                                           String defaultParamDescription) {
+        addParameterAnnotation(methodDeclaration, parameterName, JAXRS_QUERY_PARAM_CLASS, required, defaultParamDescription);
     }
 
     protected void addParameterAnnotation(MethodDeclaration methodDeclaration, String parameterName,
-                                          String jaxRsAnnotationClass, boolean required) {
+                                          String jaxRsAnnotationClass, boolean required, String defaultParamDescription) {
         Javadoc javadoc = getJavadoc(methodDeclaration);
-        String paramDescription = null;
+        String paramDescription = defaultParamDescription;
         if (javadoc != null) {
             paramDescription = getJavadocParameter(javadoc, parameterName);
         }
@@ -131,8 +131,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             }
             if (paramDescription != null) {
                 openApiAnnotationExpr.addPair(PARAMETER_DESCRIPTION, new StringLiteralExpr(escapeString(paramDescription)));
-
             }
+            methodDeclaration.getParameters().stream().filter(p -> p.getNameAsString().equals(parameterName)).
+                    forEach(p -> p.addAnnotation(openApiAnnotationExpr));
         }
     }
 
@@ -151,7 +152,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected MemberValuePair createContentAnnotationMemberForType(ClassOrInterfaceType classOrInterfaceType) {
-        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.getName().getIdentifier());
+        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
         NormalAnnotationExpr contentJsonAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
         NormalAnnotationExpr contentJsonHalAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
         return new MemberValuePair(REQUEST_BODY_API_RESPONSE_CONTENT,
@@ -249,11 +250,21 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 )));
     }
 
+    protected MethodDeclaration addInterfaceMethod(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                      String methodName, ClassOrInterfaceType returnType,
+                                                   Parameter... parameters) {
+        return classOrInterfaceDeclaration.addMethod(methodName,
+                Modifier.Keyword.PUBLIC).setParameters(
+                new NodeList(Arrays.asList(parameters))).setType(returnType).removeBody().removeModifier(
+                Modifier.Keyword.PUBLIC);
+    }
+
     protected void addOperationAnnotation(BodyDeclaration<?> bodyDeclaration,
                                           NormalAnnotationExpr requestBody,
-                                          List<NormalAnnotationExpr> responses) {
+                                          List<NormalAnnotationExpr> responses,
+                                          String defaultSummary) {
         Javadoc javadoc = getJavadoc(bodyDeclaration);
-        String summary = null;
+        String summary = defaultSummary;
         String description = null;
         if (javadoc != null) {
             summary = getJavadocSummary(getJavadocText(javadoc));
@@ -284,15 +295,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_POST_CLASS);
         removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_PUT_CLASS);
         removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_DELETE_CLASS);
-        removeJaxRsImports(compilationUnit);
-    }
-
-    protected void removeJaxRsImports(CompilationUnit compilationUnit) {
-        removeImport(compilationUnit, JAXRS_GET_CLASS);
-        removeImport(compilationUnit, JAXRS_PATCH_CLASS);
-        removeImport(compilationUnit, JAXRS_DELETE_CLASS);
-        removeImport(compilationUnit, JAXRS_POST_CLASS);
-        removeImport(compilationUnit, JAXRS_PUT_CLASS);
     }
 
     protected void addGETAnnotation(BodyDeclaration<?> bodyDeclaration) {

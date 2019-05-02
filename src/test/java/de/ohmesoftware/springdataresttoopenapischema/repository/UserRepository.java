@@ -22,6 +22,14 @@ import java.util.Optional;
 @RepositoryRestResource(path = "people")
 public interface UserRepository extends PagingAndSortingRepository<User, String>, QuerydslPredicateExecutor<User> {
 
+    /**
+     * Find by username.
+     * <p>
+     *     Escape "Test"
+     * </p>
+     * @param firstName The first name.
+     * @return The found user.
+     */
     Optional<User> findByFirstName(String firstName);
 
     void removeByUsername(String username);
