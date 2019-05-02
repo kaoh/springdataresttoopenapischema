@@ -42,6 +42,26 @@ public class Enricher {
     private static final String QUOTATION_MARK_STRING = "\"";
     private static final String OPERATION_SUMMARY = "summary";
     private static final String OPERATION_DESCRIPTION = "description";
+    private static final String OPERATION_REQUEST_BODY = "requestBody";
+    private static final String OPERATION_RESPONSES = "responses";
+
+    private static final String SCHEMA_ANNOTATION_SIMPLE_NAME = "Schema";
+    private static final String SCHEMA_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Schema";
+    private static final String SCHEMA_IMPLEMENTATION = "implementation";
+    private static final String CONTENT_ANNOTATION_SIMPLE_NAME = "Content";
+    private static final String CONTENT_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Content";
+    private static final String CONTENT_MEDIATYPE = "mediaType";
+    private static final String CONTENT_SCHEMA = "schema";
+    private static final String MEDIATYPE_JSON = "application/json;charset=UTF-8";
+    private static final String MEDIATYPE_JSON_HAL = "application/hal+json;charset=UTF-8";
+    private static final String REQUEST_BODY_SIMPLE_NAME = "RequestBody";
+    private static final String REQUEST_BODY_CLASS = "io.swagger.v3.oas.annotations.parameters.RequestBody";
+    private static final String REQUEST_BODY_DESCRIPTION = "description";
+    private static final String API_RESPONSE_SIMPLE_NAME = "ApiResponse";
+    private static final String API_RESPONSE_CLASS = "io.swagger.v3.oas.annotations.responses.ApiResponse";
+    private static final String API_RESPONSE_DESCRIPTION = "description";
+    private static final String API_RESPONSE_RESPONSE_CODE = "responseCode";
+    private static final String REQUEST_BODY_API_RESPONSE_CONTENT = "content";
 
     private static final String REPOSITORY_REST_RESOURCE_ANNOTATION_SIMPLE_NAME = "RepositoryRestResource";
     private static final String REPOSITORY_REST_RESOURCE_CLASS = "org.springframework.data.rest.core.annotation.RepositoryRestResource";
@@ -66,6 +86,7 @@ public class Enricher {
     private static final String PLURAL_S = "s";
     private static final String SLASH = "/";
     private static final String JAVA_EXT = ".java";
+    private static final String CLASS_EXT = ".class";
 
     private static final String PAGING_AND_SORTING_REPOSITORY = "PagingAndSortingRepository";
     private static final String QUERY_DSL_PREDICATE_EXECUTOR = "QuerydslPredicateExecutor";
@@ -360,6 +381,7 @@ public class Enricher {
             addMarkerAnnotation(methodDeclaration, JAXRS_GET_SIMPLE_NAME, JAXRS_GET_CLASS);
             Javadoc javadoc = findClosestMethodJavadoc(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD,
                     String.class.getSimpleName());
+            addOperationAnnotation();
         } else {
             // remove and method
             removeFindByOperation(compilationUnit, classOrInterfaceDeclaration);
@@ -604,6 +626,50 @@ public class Enricher {
     }
 
     private void addPathAnnotation(BodyDeclaration<?> bodyDeclaration, String path) {
+        AnnotationExpr annotationExpr = bodyDeclaration.getAnnotationByName(JAXRS_PATH_SIMPLE_NAME).orElse(null);
+        if (annotationExpr == null) {
+            annotationExpr = bodyDeclaration.addAndGetAnnotation(JAXRS_PATH_CLASS);
+        }
+        Optional<MemberValuePair> memberValuePairOptional = (((NormalAnnotationExpr) annotationExpr).getPairs().stream().filter(
+                a -> a.getName().getIdentifier().equals(RESOURCE_PATH)
+        ).findFirst());
+        if (!memberValuePairOptional.isPresent()) {
+            ((NormalAnnotationExpr) annotationExpr).addPair(RESOURCE_PATH,
+                    path);
+        } else {
+            memberValuePairOptional.get().setValue(new NameExpr(path));
+        }
+    }
+
+    private Name getNameFromClass(String fqClassName) {
+        String[] packages = fqClassName.split("\\.");
+        Name prevName = null;
+        for (int i=0; i<packages.length; i++) {
+            Name name = new Name(prevName, packages[i]);
+            prevName = name;
+        }
+        return prevName;
+    }
+
+    private void createContentAnnotation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                         AnnotationDeclaration annotationDeclaration, String mediaType) {
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
+
+        NormalAnnotationExpr schemaAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
+                new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_IMPLEMENTATION,
+                        new StringLiteralExpr(domainClassOrInterfaceType.getName().getIdentifier()+CLASS_EXT)))));
+
+        NormalAnnotationExpr contentJsonAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(CONTENT_ANNOTATION_CLASS),
+                new NodeList<>(Arrays.asList(
+                        new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(MEDIATYPE_JSON)),
+                        new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr)
+                        )));
+        NormalAnnotationExpr contentJsonHalAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(CONTENT_ANNOTATION_CLASS),
+                new NodeList<>(Arrays.asList(
+                        new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(MEDIATYPE_JSON_HAL)),
+                        new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr)
+                )));
+
         AnnotationExpr annotationExpr = bodyDeclaration.getAnnotationByName(JAXRS_PATH_SIMPLE_NAME).orElse(null);
         if (annotationExpr == null) {
             annotationExpr = bodyDeclaration.addAndGetAnnotation(JAXRS_PATH_CLASS);
