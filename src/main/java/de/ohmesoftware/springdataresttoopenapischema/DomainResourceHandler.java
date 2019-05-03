@@ -33,6 +33,7 @@ public class DomainResourceHandler extends ResourceHandler {
         super(sourceFile, sourcePath, basePath, compilationUnit);
         resourceMethodHandlers = new ArrayList<>();
         resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new CustomFinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 
     @Override

@@ -2,18 +2,18 @@ package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
-import com.github.javaparser.ast.body.*;
+import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * base class for processing resources.
@@ -63,7 +63,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     /**
      * Constructor.
      *
-     * @param sourceFile The source file.
+     * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
@@ -91,6 +91,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected ClassOrInterfaceType getOptionalWrapper(ClassOrInterfaceType classOrInterfaceType) {
         return getClassOrInterfaceTypeFromClassName(compilationUnit,
                 Optional.class.getName()).setTypeArguments(classOrInterfaceType);
+    }
+
+    protected ClassOrInterfaceType unwrapOptionalClassOrInterfaceType(ClassOrInterfaceType classOrInterfaceType) {
+        if (classOrInterfaceType.getName().getIdentifier().equals(Optional.class.getSimpleName()) &&
+                classOrInterfaceType.getTypeArguments().isPresent()) {
+            classOrInterfaceType = (ClassOrInterfaceType) classOrInterfaceType.getTypeArguments().get().get(0);
+        }
+        return classOrInterfaceType;
     }
 
     // annotations
@@ -170,31 +178,30 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContent(CompilationUnit compilationUnit,
                                                                              ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                              int statusCode) {
-        String summary = getDomainSummary(compilationUnit, classOrInterfaceDeclaration);
-        return new NormalAnnotationExpr(getNameFromClass(API_RESPONSE_CLASS),
-                new NodeList<>(Arrays.asList(
-                        new MemberValuePair(API_RESPONSE_RESPONSE_CODE, new StringLiteralExpr(Integer.toString(statusCode))),
-                        new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(escapeString(summary))),
-                        createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration)
-                )));
+        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getDomainSummary(compilationUnit, classOrInterfaceDeclaration),
+                createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration));
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentForType(int statusCode, ClassOrInterfaceType classOrInterfaceType) {
-        String summary = getTypeSummary(classOrInterfaceType);
+    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentAnnotation(int statusCode,
+                                                                                       String summary,
+                                                                                       MemberValuePair contentAnnotationmemberValuePair) {
         return new NormalAnnotationExpr(getNameFromClass(API_RESPONSE_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(API_RESPONSE_RESPONSE_CODE, new StringLiteralExpr(Integer.toString(statusCode))),
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(
                                 escapeString(summary))),
-                        createContentAnnotationMemberForType(classOrInterfaceType)
+                        contentAnnotationmemberValuePair
                 )));
     }
 
+    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentForType(int statusCode, ClassOrInterfaceType classOrInterfaceType) {
+
+        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getTypeSummary(classOrInterfaceType),
+                createContentAnnotationMemberForType(classOrInterfaceType));
+    }
+
     protected void removeMethodParameterAnnotation(MethodDeclaration methodDeclaration, String annotationClass) {
-        methodDeclaration.getParameters().stream().map(Parameter::getAnnotations).forEach(n -> n.stream().
-                filter(a -> a.getName().getIdentifier().equals(getSimpleNameFromClass(annotationClass))).forEach(
-                Node::remove
-        ));
+        methodDeclaration.getParameters().stream().map(Parameter::getAnnotations).forEach(n -> n.removeIf(a -> a.getName().getIdentifier().equals(getSimpleNameFromClass(annotationClass))));
     }
 
     private String getDomainSummary(CompilationUnit compilationUnit,
@@ -203,7 +210,23 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return getTypeSummary(domainClassOrInterfaceType);
     }
 
+    private boolean isPrimitiveObject(ClassOrInterfaceType classOrInterfaceType) {
+        switch (classOrInterfaceType.getName().getIdentifier()) {
+            case "String":
+            case "Long":
+            case "Integer":
+            case "Double":
+            case "Float":
+            case "Boolean":
+                return true;
+        }
+        return false;
+    }
+
     private String getTypeSummary(ClassOrInterfaceType classOrInterfaceType) {
+        if (isPrimitiveObject(classOrInterfaceType)) {
+            return null;
+        }
         Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
                 parseClassOrInterfaceType(compilationUnit, classOrInterfaceType);
         Javadoc javadoc = getJavadoc(compilationUnitClassOrInterfaceDeclarationPair.b);
@@ -251,7 +274,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected MethodDeclaration addInterfaceMethod(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
-                                      String methodName, ClassOrInterfaceType returnType,
+                                                   String methodName, ClassOrInterfaceType returnType,
                                                    Parameter... parameters) {
         return classOrInterfaceDeclaration.addMethod(methodName,
                 Modifier.Keyword.PUBLIC).setParameters(
@@ -338,7 +361,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
-    protected void removeCrudOperation(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected void removeOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         if (methodDeclaration == null) {
             return;
         }
@@ -350,6 +373,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                     break;
                 case QUERY_DSL_PREDICATE_EXECUTOR:
                 case REPOSITORY:
+                default:
                     // only remove Operation annotation and JAX-RS
                     removeJaxRsAnnotations(compilationUnit, methodDeclaration);
                     removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
@@ -360,13 +384,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     // finders
 
-    private String getMethodPath(MethodDeclaration methodDeclaration) {
+    protected String getMethodPath(MethodDeclaration methodDeclaration) {
         return methodDeclaration.getSignature().getName();
-    }
-
-    protected ClassOrInterfaceDeclaration findReturnEntityType(MethodDeclaration methodDeclaration) {
-        CallableDeclaration.Signature signature = methodDeclaration.getSignature();
-        return null;
     }
 
     protected MethodDeclaration findClosestMethod(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
@@ -391,10 +410,35 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return null;
     }
 
+    protected List<MethodDeclaration> findCustomMethods(CompilationUnit compilationUnit,
+                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                                        String customMethodPrefix, Set<String> excludedMethods) {
+        List<MethodDeclaration> customerFinderMethodDeclarations =
+                classOrInterfaceDeclaration.getMethods().stream().filter(
+                        m -> !excludedMethods.contains(m.getSignature().getName())
+                                && m.getSignature().getName().startsWith(customMethodPrefix)
+                ).collect(Collectors.toList());
+        // check in implementations, too
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            if (getSourceFile(compilationUnit, extent).exists()) {
+                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                List<MethodDeclaration> otherMethodDeclarations = findCustomMethods(compilationUnitClassOrInterfaceDeclarationPair.a,
+                        compilationUnitClassOrInterfaceDeclarationPair.b, customMethodPrefix, excludedMethods);
+                customerFinderMethodDeclarations.addAll(otherMethodDeclarations);
+            }
+        }
+        return customerFinderMethodDeclarations;
+    }
+
     protected NormalAnnotationExpr findClosestMethodResourceAnnotation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                        String methodName, String... paramTypes) {
-        List<MethodDeclaration> findByIdMethodDeclarations = classOrInterfaceDeclaration.getMethodsBySignature(methodName,
-                paramTypes);
+        List<MethodDeclaration> findByIdMethodDeclarations;
+        if (paramTypes != null) {
+            findByIdMethodDeclarations = classOrInterfaceDeclaration.getMethodsBySignature(methodName,
+                    paramTypes);
+        } else {
+            findByIdMethodDeclarations = classOrInterfaceDeclaration.getMethodsByName(methodName);
+        }
         if (!findByIdMethodDeclarations.isEmpty()) {
             MethodDeclaration methodDeclaration = findByIdMethodDeclarations.stream().findFirst().get();
             // first found annotation in class / interface hierarchy

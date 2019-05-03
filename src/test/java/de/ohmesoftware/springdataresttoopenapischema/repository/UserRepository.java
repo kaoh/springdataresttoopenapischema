@@ -14,7 +14,7 @@ import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 import java.util.Optional;
 
 /**
- * Repository for ProfilesTypes.
+ * Repository for Users.
  *
  * @author <a href="mailto:karsten@simless.com">Karsten Ohme
  * (karsten@simless.com)</a>

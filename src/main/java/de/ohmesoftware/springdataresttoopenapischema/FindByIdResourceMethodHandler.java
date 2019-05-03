@@ -8,7 +8,6 @@ import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.Collections;
-import java.util.Optional;
 
 /**
  * Resource method handler for findById.
@@ -52,7 +51,7 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
-            removeCrudOperation(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
+            removeOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
         }
     }
 

@@ -44,7 +44,7 @@ public abstract class ResourceHandler {
 
     private static final String DOT = ".";
     private static final String PLURAL_S = "s";
-    private static final String SLASH = "/";
+    protected static final String SLASH = "/";
     private static final String JAVA_EXT = ".java";
 
     protected static final String PAGING_AND_SORTING_REPOSITORY = "PagingAndSortingRepository";
@@ -53,6 +53,8 @@ public abstract class ResourceHandler {
     protected static final String REPOSITORY = "Repository";
 
     private static final String JAVADOC_PARAM_TAG = "param";
+    private static final String PARAGRAPH_START = "<p>";
+    private static final String PARAGRAPH_END = "</p>";
 
     /**
      * The source file.
@@ -99,7 +101,7 @@ public abstract class ResourceHandler {
         try {
             return JavaParser.parse(file);
         } catch (FileNotFoundException e) {
-            throw new RuntimeException("Could not find file.", e);
+            throw new RuntimeException(String.format("Could not find file: %s", file), e);
         }
     }
 
@@ -246,7 +248,7 @@ public abstract class ResourceHandler {
     }
 
     protected void addPathAnnotation(BodyDeclaration<?> bodyDeclaration, String path) {
-        bodyDeclaration.addSingleMemberAnnotation(JAXRS_PATH_CLASS, new NameExpr(quoteString(path)));
+        bodyDeclaration.addSingleMemberAnnotation(JAXRS_PATH_CLASS, new NameExpr(quoteString(SLASH + path)));
     }
 
     // Resource annotations
@@ -268,7 +270,7 @@ public abstract class ResourceHandler {
         CompilationUnit newCompilationUnit = parseFile(getSourceFile(compilationUnit, classOrInterfaceType));
         ClassOrInterfaceDeclaration newClassOrInterfaceDeclaration = newCompilationUnit.findFirst(ClassOrInterfaceDeclaration.class).
                 orElseThrow(() -> new RuntimeException(
-                        String.format("Could not parse class or interface type: %s", classOrInterfaceType.getName().getIdentifier())));
+                        String.format("Could not parse class or interface type: %s", classOrInterfaceType.asString())));
         return new Pair<>(newCompilationUnit, newClassOrInterfaceDeclaration);
     }
 
@@ -317,12 +319,22 @@ public abstract class ResourceHandler {
     }
 
     protected String getJavadocSummary(String javadoc) {
-        String[] commentParts = javadoc.split("<p>");
+        String[] commentParts = javadoc.split(PARAGRAPH_START);
         return commentParts[0].trim();
     }
 
     protected String getJavadocDescription(String javadoc) {
-        String[] commentParts = javadoc.split("<p>");
-        return commentParts.length > 1 ? commentParts[1].trim() : null;
+        String[] commentParts = javadoc.split(PARAGRAPH_START);
+        if (commentParts.length > 1) {
+            String description = commentParts[1].trim();
+            if (description.endsWith(PARAGRAPH_START)) {
+                description = description.substring(0, description.length()-PARAGRAPH_START.length());
+            }
+            if (description.endsWith(PARAGRAPH_END)) {
+                description = description.substring(0, description.length()-PARAGRAPH_END.length());
+            }
+            return description;
+        }
+        return null;
     }
 }
