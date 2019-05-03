@@ -10,6 +10,7 @@ import de.ohmesoftware.springdataresttoopenapischema.model.subdir.User;
 import org.springframework.data.querydsl.QuerydslPredicateExecutor;
 import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
+import org.springframework.data.rest.core.annotation.RestResource;
 
 import java.util.Optional;
 
@@ -32,6 +33,11 @@ public interface UserRepository extends PagingAndSortingRepository<User, String>
      */
     Optional<User> findByFirstName(String firstName);
 
+    /**
+     * Deletes the user.
+     * @param username The username.
+     */
+    @RestResource(path = "deleteUser")
     void removeByUsername(String username);
 
     <S extends User> S create(S entity);

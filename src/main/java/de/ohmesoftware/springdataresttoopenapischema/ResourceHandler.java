@@ -255,7 +255,7 @@ public abstract class ResourceHandler {
 
     protected boolean checkResourceExported(NormalAnnotationExpr resource) {
         return resource.getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_EXPORTED)).map(p -> p.getValue().asBooleanLiteralExpr().getValue())
-                .findFirst().orElse(false);
+                .findFirst().orElse(true);
     }
 
     protected String getResourcePath(NormalAnnotationExpr resource) {

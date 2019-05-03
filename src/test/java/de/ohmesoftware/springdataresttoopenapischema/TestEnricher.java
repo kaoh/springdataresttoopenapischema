@@ -43,15 +43,15 @@ public class TestEnricher {
         assertTrue(newContent.contains("requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = " +
                 "\"A user being able to log-in.\", content = { @io.swagger.v3.oas.annotations.media.Content(" +
                 "mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(" +
-                "implementation = \"de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class\")), @io.swagger.v3.oas.annotations.media.Content(" +
+                "implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)), @io.swagger.v3.oas.annotations.media.Content(" +
                 "mediaType = \"application/hal+json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = \"de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class\")) })"));
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)) })"));
         assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", " +
                 "description = \"A user being able to log-in.\", content = { " +
                 "@io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = \"de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class\")), " +
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)), " +
                 "@io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = \"de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class\")) }) }"));
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)) }) }"));
     }
 
     @Test
@@ -59,8 +59,6 @@ public class TestEnricher {
         Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
-        assertTrue(newContent.contains("package de.ohmesoftware.springdataresttoopenapischema.repository;"));
-        assertTrue(newContent.contains("@javax.ws.rs.Path(\"/people\""));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Find by username.\", description = \"Escape \\\"Test\\\"\""));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
         assertTrue(newContent.contains("@javax.ws.rs.Path(\"/search/findByFirstName\")"));
@@ -68,8 +66,21 @@ public class TestEnricher {
         assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", " +
                 "description = \"A user being able to log-in.\", " +
                 "content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = \"User.class\")), " +
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = User.class)), " +
                 "@io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = \"User.class\")) }) }"));
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = User.class)) }) }"));
+    }
+
+    @Test
+    public void testRemoveByUsernameEnrich() throws Exception {
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes the user.\""));
+        assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
+        assertTrue(newContent.contains("@javax.ws.rs.Path(\"/search/deleteUser\")"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The username.\")"));
+        assertTrue(newContent.contains("javax.ws.rs.QueryParam(value = \"username\""));
+        assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") }"));
     }
 }

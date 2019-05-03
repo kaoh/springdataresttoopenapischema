@@ -54,8 +54,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String JAXRS_QUERY_PARAM_CLASS = "javax.ws.rs.QueryParam";
     protected static final String JAXRS_QUERY_PATH_PARAM_VALUE = "value";
 
-    private static final String CLASS_EXT = ".class";
-
     // TODO: maybe this can be improved without artificial methods
     protected static final String CREATE_METHOD_PATH = "create";
     protected static final String UPDATE_METHOD_PATH = "update";
@@ -148,7 +146,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected NormalAnnotationExpr createSchemaAnnotation(String domainClass) {
         return new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
                 new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_IMPLEMENTATION,
-                        new StringLiteralExpr(domainClass + CLASS_EXT)))));
+                        new ClassExpr(new ClassOrInterfaceType(null, domainClass))))));
     }
 
     protected NormalAnnotationExpr createContentAnnotation(NormalAnnotationExpr schemaAnnotationExpr, String mediaType) {
@@ -269,7 +267,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return new NormalAnnotationExpr(getNameFromClass(API_RESPONSE_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(API_RESPONSE_RESPONSE_CODE, new StringLiteralExpr("204")),
-                        new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr("No Content"))
+                        new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr("No Content."))
                 )));
     }
 
@@ -433,7 +431,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected NormalAnnotationExpr findClosestMethodResourceAnnotation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                        String methodName, String... paramTypes) {
         List<MethodDeclaration> findByIdMethodDeclarations;
-        if (paramTypes != null) {
+        if (paramTypes != null && paramTypes.length > 0) {
             findByIdMethodDeclarations = classOrInterfaceDeclaration.getMethodsBySignature(methodName,
                     paramTypes);
         } else {
