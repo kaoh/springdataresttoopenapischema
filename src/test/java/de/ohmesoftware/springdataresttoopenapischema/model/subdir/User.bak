@@ -1,5 +1,7 @@
 package de.ohmesoftware.springdataresttoopenapischema.model.subdir;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * A user being able to log-in.
  * <p>
@@ -15,6 +17,7 @@ public class User {
      * The username.
      */
     public String username;
+
     /**
      * The email address.
      * <p>
@@ -23,15 +26,23 @@ public class User {
      */
     @io.swagger.v3.oas.annotations.media.Schema(description = "Test")
     public String emailAddress;
+
     /**
      * The password.
      */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     public String password;
+
     /**
      * The role.
      */
     public String role;
+
     public String firstName;
+
     public String lastName;
+
     public String extra;
+
+    public Organisation organisation;
 }

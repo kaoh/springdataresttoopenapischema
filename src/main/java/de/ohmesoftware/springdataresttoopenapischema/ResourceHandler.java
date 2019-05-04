@@ -6,10 +6,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.comments.Comment;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.NameExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
+import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
@@ -43,7 +40,7 @@ public abstract class ResourceHandler {
     private static final String QUOTATION_MARK_STRING = "\"";
 
     private static final String DOT = ".";
-    private static final String PLURAL_S = "s";
+    protected static final String PLURAL_S = "s";
     protected static final String SLASH = "/";
     private static final String JAVA_EXT = ".java";
 
@@ -253,13 +250,19 @@ public abstract class ResourceHandler {
 
     // Resource annotations
 
-    protected boolean checkResourceExported(NormalAnnotationExpr resource) {
-        return resource.getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_EXPORTED)).map(p -> p.getValue().asBooleanLiteralExpr().getValue())
+    protected boolean checkResourceExported(AnnotationExpr resource) {
+        if (resource.isMarkerAnnotationExpr()) {
+            return true;
+        }
+        return resource.asNormalAnnotationExpr().getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_EXPORTED)).map(p -> p.getValue().asBooleanLiteralExpr().getValue())
                 .findFirst().orElse(true);
     }
 
-    protected String getResourcePath(NormalAnnotationExpr resource) {
-        return resource.getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_PATH)).
+    protected String getResourcePath(AnnotationExpr resource) {
+        if (!resource.isNormalAnnotationExpr()) {
+            return null;
+        }
+        return resource.asNormalAnnotationExpr().getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_PATH)).
                 map(p -> p.getValue().asStringLiteralExpr().asString()).findFirst().
                 orElse(null);
     }
@@ -274,20 +277,22 @@ public abstract class ResourceHandler {
         return new Pair<>(newCompilationUnit, newClassOrInterfaceDeclaration);
     }
 
-    protected Optional<NormalAnnotationExpr> checkResourceAnnotationPresent(BodyDeclaration<? extends BodyDeclaration> bodyDeclaration) {
+    protected Optional<AnnotationExpr> checkResourceAnnotationPresent(BodyDeclaration<? extends BodyDeclaration> bodyDeclaration) {
         Optional<AnnotationExpr> restResourceOptional =
                 bodyDeclaration.getAnnotationByName(getSimpleNameFromClass(REPOSITORY_REST_RESOURCE_CLASS));
         if (!restResourceOptional.isPresent()) {
             restResourceOptional =
                     bodyDeclaration.getAnnotationByName(getSimpleNameFromClass(RESOURCE_CLASS));
         }
-        return restResourceOptional.
-                map(Expression::asNormalAnnotationExpr);
+        return restResourceOptional;
     }
 
-    protected boolean checkResourceExported(NormalAnnotationExpr resource,
+    protected boolean checkResourceExported(AnnotationExpr resource,
                                             boolean repoAnnotationRequired) {
-        return resource.getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_EXPORTED))
+        if (resource.isMarkerAnnotationExpr()) {
+            return true;
+        }
+        return resource.asNormalAnnotationExpr().getPairs().stream().filter(p -> p.getName().getIdentifier().equals(RESOURCE_EXPORTED))
                 .map(p -> p.getValue().asBooleanLiteralExpr().getValue()).findFirst().orElse(!repoAnnotationRequired);
     }
 

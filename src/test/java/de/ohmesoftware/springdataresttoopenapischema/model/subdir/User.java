@@ -1,5 +1,7 @@
 package de.ohmesoftware.springdataresttoopenapischema.model.subdir;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * A user being able to log-in.
  * <p>
@@ -28,6 +30,7 @@ public class User {
     /**
      * The password.
      */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     public String password;
 
     /**
@@ -39,5 +42,11 @@ public class User {
 
     public String lastName;
 
+    public boolean blocked;
+
+    public int failedLoginAttempts;
+
     public String extra;
+
+    public Organisation organisation;
 }

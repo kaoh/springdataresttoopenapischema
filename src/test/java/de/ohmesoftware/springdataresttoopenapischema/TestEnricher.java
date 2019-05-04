@@ -1,5 +1,6 @@
 package de.ohmesoftware.springdataresttoopenapischema;
 
+import de.ohmesoftware.springdataresttoopenapischema.repository.OrganisationRepository;
 import de.ohmesoftware.springdataresttoopenapischema.repository.UserRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -26,6 +27,7 @@ public class TestEnricher {
     @After
     public void after() throws Exception {
         FileUtils.copyFile(new File(buildPath(UserRepository.class.getName()) + ".bak"), new File(buildPath(UserRepository.class.getName()) + ".java"));
+        FileUtils.copyFile(new File(buildPath(OrganisationRepository.class.getName()) + ".bak"), new File(buildPath(OrganisationRepository.class.getName()) + ".java"));
     }
 
     @Test
@@ -82,5 +84,36 @@ public class TestEnricher {
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The username.\")"));
         assertTrue(newContent.contains("javax.ws.rs.QueryParam(value = \"username\""));
         assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") }"));
+    }
+
+    @Test
+    public void testFindersEnrich() throws Exception {
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users.\""));
+        assertTrue(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.User> findAll(com.querydsl.core.types.Predicate predicate, org.springframework.data.domain.Pageable pageable)"));
+        assertTrue(newContent.contains("@javax.ws.rs.GET"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page number to return.\")"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page size.\")"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, " +
+                "description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|extra|organisation.*)=<value>,(asc|desc))*\")"));
+
+    }
+
+    @Test
+    public void testFindersEnrichExistingQuerydslFinder() throws Exception {
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users.\""));
+        assertTrue(newContent.contains("Iterable<Organisation> findAll(Sort sort)"));
+        assertFalse(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation> findAll(org.springframework.data.domain.Pageable pageable)"));
+        assertTrue(newContent.contains("@javax.ws.rs.GET"));
+        assertFalse(newContent.contains("name = \"page\""));
+        assertFalse(newContent.contains("name = \"size\""));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, " +
+                "description = \"The sorting criteria(s). Syntax: ((name)=<value>,(asc|desc))*\")"));
+
     }
 }

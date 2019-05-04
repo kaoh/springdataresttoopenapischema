@@ -9,6 +9,7 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,13 +23,9 @@ import java.util.stream.Collectors;
 public class FinderResourceMethodHandler extends ResourceMethodHandler {
 
     private static final String FIND_ALL_METHOD = "findAll";
-    private static final String PAGEABLE_CLASS = "org.springframework.data.domain.Pageable";
-    private static final String SORT_CLASS = "org.springframework.data.domain.Sort";
     private static final String QUERYDSL_PREDICATE_CLASS = "com.querydsl.core.types.Predicate";
+    private static final String ITERABLE_CLASS = "java.lang.Iterable";
     private static final String PREDICATE_PARAM = "predicate";
-    private static final String SORT_PARAM = "sort";
-    private static final String PAGEABLE_PARAM = "pageable";
-
     /**
      * Constructor.
      *
@@ -67,7 +64,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void addFindAllOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         List<Pair<String, List<String>>> methodVariants = new ArrayList<>();
-        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(PREDICATE_PARAM)));
+        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Arrays.asList(PREDICATE_PARAM, PAGEABLE_PARAM)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(PAGEABLE_PARAM)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(SORT_PARAM)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, null));
@@ -79,11 +76,15 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             // query dsl has preference
             if (checkIfExtendingQuerydslInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
-                        FIND_ALL_METHOD, getOptionalWrapper(domainClassOrInterfaceType), new Parameter(
-                                getClassOrInterfaceTypeFromClassName(compilationUnit, QUERYDSL_PREDICATE_CLASS), PREDICATE_PARAM));
+                        FIND_ALL_METHOD, getWrapperForType(domainClassOrInterfaceType, PAGE_CLASS),
+                        new Parameter(
+                                getClassOrInterfaceTypeFromClassName(compilationUnit, QUERYDSL_PREDICATE_CLASS), PREDICATE_PARAM),
+                        new Parameter(
+                                getClassOrInterfaceTypeFromClassName(compilationUnit, PAGEABLE_CLASS), PAGEABLE_PARAM)
+                        );
             } else if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
-                        FIND_ALL_METHOD, getOptionalWrapper(domainClassOrInterfaceType), new Parameter(
+                        FIND_ALL_METHOD, getWrapperForType(domainClassOrInterfaceType, PAGE_CLASS), new Parameter(
                                 getClassOrInterfaceTypeFromClassName(compilationUnit, PAGEABLE_CLASS), PAGEABLE_PARAM));
             }
         }
@@ -108,32 +109,33 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             if (methodPath != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }
+            List<NormalAnnotationExpr> parameters = new ArrayList<>();
+            Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+                    parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
+
             for (String param : params) {
-                String description = null;
                 switch (param) {
                     case PREDICATE_PARAM:
-                        description = "The query predicate.";
+                    case PAGEABLE_PARAM:
+                        parameters.addAll(getPageableParams(methodDeclaration,
+                                compilationUnitClassOrInterfaceDeclarationPair.b));
                         break;
                     case SORT_PARAM:
-                        description = "The sort parameters.";
+                        parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
+                                compilationUnitClassOrInterfaceDeclarationPair.b));
                         break;
-                    case PAGEABLE_PARAM:
-                        description = "The paging parameters.";
-                        break;
-                }
-                if (description != null) {
-                    addPathParamAnnotation(methodDeclaration, param, true, description);
                 }
             }
             addGETAnnotation(methodDeclaration);
-            addOperationAnnotation(methodDeclaration, createRequestBodyAnnotation(compilationUnit,
+            addOperationAnnotation(methodDeclaration, parameters,
+                    createRequestBodyAnnotation(compilationUnit,
                     classOrInterfaceDeclaration),
                     Collections.singletonList(
                             createApiResponseAnnotation200WithContent(compilationUnit,
                                     classOrInterfaceDeclaration)),
-                    String.format("Finds all %s.",
+                    String.format("Finds all %s%s.",
                             getSimpleNameFromClass(
-                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString()), PLURAL_S));
         }
     }
 

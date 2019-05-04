@@ -2,6 +2,7 @@ package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 
 import java.io.File;
@@ -35,6 +36,7 @@ public class DomainResourceHandler extends ResourceHandler {
         resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CustomFinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CustomRemoveResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 
     @Override
@@ -46,7 +48,7 @@ public class DomainResourceHandler extends ResourceHandler {
             // clean all first
             removeResourceAnnotations();
             // check if annotated with RepositoryRestResource
-            Optional<NormalAnnotationExpr> restResourceOptional = checkResourceAnnotationPresent(classOrInterfaceDeclaration);
+            Optional<AnnotationExpr> restResourceOptional = checkResourceAnnotationPresent(classOrInterfaceDeclaration);
             if (restResourceOptional.isPresent() && checkResourceExported(restResourceOptional.get(), false)) {
                 String resourcePath = getResourcePath(restResourceOptional.get());
                 if (resourcePath == null) {

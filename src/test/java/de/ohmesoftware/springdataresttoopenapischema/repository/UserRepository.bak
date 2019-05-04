@@ -1,9 +1,3 @@
-/*
- * Copyright(c) 2019 Simless, Inc.
- *
- * All rights reserved.
- */
-
 package de.ohmesoftware.springdataresttoopenapischema.repository;
 
 import de.ohmesoftware.springdataresttoopenapischema.model.subdir.User;
@@ -17,8 +11,8 @@ import java.util.Optional;
 /**
  * Repository for Users.
  *
- * @author <a href="mailto:karsten@simless.com">Karsten Ohme
- * (karsten@simless.com)</a>
+ * @author <a href="mailto:k_o_@users.sourceforge.net">Karsten Ohme
+ * (k_o_@users.sourceforge.net)</a>
  */
 @RepositoryRestResource(path = "people")
 public interface UserRepository extends PagingAndSortingRepository<User, String>, QuerydslPredicateExecutor<User> {
