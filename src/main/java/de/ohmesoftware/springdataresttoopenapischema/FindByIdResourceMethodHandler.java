@@ -51,7 +51,7 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
-            removeOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
+            removeCrudOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
         }
     }
 

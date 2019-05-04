@@ -348,36 +348,61 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                     return true;
                 default:
                     // visit interface to get information
-                    Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                    boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b);
-                    if (extending) {
-                        return extending;
+                    if (getSourceFile(compilationUnit, extent).exists()) {
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (extending) {
+                            return extending;
+                        }
                     }
             }
         }
         return false;
     }
 
-    protected void removeOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected boolean checkIfExtendingQuerydslInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            switch (extent.getName().getIdentifier()) {
+                case QUERY_DSL_PREDICATE_EXECUTOR:
+                    return true;
+                default:
+                    // visit interface to get information
+                    if (getSourceFile(compilationUnit, extent).exists()) {
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        boolean extending = checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (extending) {
+                            return extending;
+                        }
+                    }
+            }
+        }
+        return false;
+    }
+
+    protected void removeCrudOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         if (methodDeclaration == null) {
             return;
         }
-        for (ClassOrInterfaceType classOrInterfaceType : classOrInterfaceDeclaration.getExtendedTypes()) {
-            switch (classOrInterfaceType.getName().getIdentifier()) {
-                case PAGING_AND_SORTING_REPOSITORY:
-                case CRUD_REPOSITORY:
-                    methodDeclaration.remove();
-                    break;
-                case QUERY_DSL_PREDICATE_EXECUTOR:
-                case REPOSITORY:
-                default:
-                    // only remove Operation annotation and JAX-RS
-                    removeJaxRsAnnotations(compilationUnit, methodDeclaration);
-                    removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
-                    break;
-            }
+        if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+            methodDeclaration.remove();
         }
+        // remove Operation annotation and JAX-RS
+        removeJaxRsAnnotations(compilationUnit, methodDeclaration);
+        removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
+    }
+
+    protected void removeQuerydslOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        if (methodDeclaration == null) {
+            return;
+        }
+        if (checkIfExtendingQuerydslInterface(compilationUnit, classOrInterfaceDeclaration)) {
+            methodDeclaration.remove();
+        }
+        // remove Operation annotation and JAX-RS
+        removeJaxRsAnnotations(compilationUnit, methodDeclaration);
+        removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
     }
 
     // finders
@@ -426,6 +451,30 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             }
         }
         return customerFinderMethodDeclarations;
+    }
+
+    protected MethodDeclaration findClosestMethodFromMethodVariants(CompilationUnit compilationUnit,
+                                                                  ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                                                  List<Pair<String, List<String>>> methodVariants) {
+        for (Pair<String, List<String>> methodParameterEntry : methodVariants) {
+            String[] params = methodParameterEntry.b != null ?
+                    methodParameterEntry.b.toArray(new String[0]) : null;
+            MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+                    methodParameterEntry.a, params);
+            if (methodDeclaration != null) {
+                NormalAnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
+                        classOrInterfaceDeclaration, methodParameterEntry.a, params);
+                if (methodResource != null) {
+                    if (checkResourceExported(methodResource)) {
+                        return methodDeclaration;
+                    }
+                }
+                else {
+                    return methodDeclaration;
+                }
+            }
+        }
+        return null;
     }
 
     protected NormalAnnotationExpr findClosestMethodResourceAnnotation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
