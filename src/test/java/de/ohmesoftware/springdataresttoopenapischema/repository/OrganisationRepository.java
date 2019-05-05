@@ -17,7 +17,7 @@ import java.util.Optional;
  */
 @RepositoryRestResource
 @javax.ws.rs.Path("/organisations")
-public interface OrganisationRepository extends PagingAndSortingRepository<Organisation, String> {
+public interface OrganisationRepository extends MiddleRepository<Organisation> {
 
     @RestResource
     @javax.ws.rs.GET()

@@ -4,7 +4,6 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.Collections;
@@ -20,7 +19,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     private static final String CUSTOM_FIND_METHOD_PREFIX = "findBy";
     private static final String FIND_BY_ID_METHOD = "findById";
-    private static final String SEARCH_PATH = "search"+SLASH;
+    private static final String SEARCH_PATH = "search" + SLASH;
 
     /**
      * Constructor.
@@ -36,14 +35,18 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     @Override
     public void addResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> addCustomFinderOperations(compilationUnit, c)
         );
     }
 
     @Override
     public void removeResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> removeCustomFinderOperation(compilationUnit, c)
         );
     }
@@ -70,6 +73,11 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomFinderOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
+        // check if this method is using a precise class
+        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
+            // add method to class
+            classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
+        }
         AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
                 classOrInterfaceDeclaration, methodDeclaration.getNameAsString());
         boolean exported = true;
@@ -84,13 +92,13 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
         if (exported) {
             methodDeclaration.getParameters().forEach(p ->
                     addQueryParamAnnotation(methodDeclaration, p.getNameAsString(), true, null));
-            addPathAnnotation(methodDeclaration, SEARCH_PATH+methodPath);
+            addPathAnnotation(methodDeclaration, SEARCH_PATH + methodPath);
             addGETAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration,
                     null,
                     Collections.singletonList(
                             createApiResponseAnnotation20xWithContentForType(200,
-                                    unwrapOptionalClassOrInterfaceType((ClassOrInterfaceType)methodDeclaration.getType()))),
+                                    unwrapOptionalClassOrInterfaceType((ClassOrInterfaceType) methodDeclaration.getType()))),
                     null);
         }
     }

@@ -1,10 +1,10 @@
 package de.ohmesoftware.springdataresttoopenapischema;
 
+import de.ohmesoftware.springdataresttoopenapischema.repository.MiddleRepository;
 import de.ohmesoftware.springdataresttoopenapischema.repository.OrganisationRepository;
 import de.ohmesoftware.springdataresttoopenapischema.repository.UserRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import java.io.File;
@@ -26,9 +26,10 @@ public class TestEnricher {
     }
 
     @Before
-    public void after() throws Exception {
+    public void before() throws Exception {
         FileUtils.copyFile(new File(buildPath(UserRepository.class.getName()) + ".bak"), new File(buildPath(UserRepository.class.getName()) + ".java"));
         FileUtils.copyFile(new File(buildPath(OrganisationRepository.class.getName()) + ".bak"), new File(buildPath(OrganisationRepository.class.getName()) + ".java"));
+        FileUtils.copyFile(new File(buildPath(MiddleRepository.class.getName()) + ".bak"), new File(buildPath(MiddleRepository.class.getName()) + ".java"));
     }
 
     @Test

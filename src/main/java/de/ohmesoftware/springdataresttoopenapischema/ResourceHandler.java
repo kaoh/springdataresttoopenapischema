@@ -140,13 +140,17 @@ public abstract class ResourceHandler {
                 return Optional.class.getPackage().getName() + DOT + className;
         }
         return compilationUnit.getImports().stream().filter(i -> !i.isAsterisk() && i.getName().getIdentifier().endsWith(className)).
-                map(i -> i.getName().asString()).findFirst().orElseThrow(() -> new RuntimeException(
-                String.format("Could not resolve import for type: %s", className)));
+                map(i -> i.getName().asString()).findFirst().orElse(
+                        compilationUnit.getPackageDeclaration().map(p -> p.getName().asString() + DOT + className).
+                                orElseThrow(
+                                        () -> new RuntimeException(
+                                                String.format("Could not resolve import for type: %s", className))
+                                ));
     }
 
     private String getFullClassName(CompilationUnit compilationUnit,
                                     ClassOrInterfaceType extent) {
-        String className = extent.getName().getIdentifier();
+        String className = extent.getNameAsString();
         return getFullClassName(compilationUnit, className);
     }
 
@@ -218,12 +222,18 @@ public abstract class ResourceHandler {
                     }
                     return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(0).asString());
                 default:
-                    // visit interface to get information
-                    Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                    ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b);
-                    if (domainClassOrInterfaceType != null) {
-                        return domainClassOrInterfaceType;
+                    // domain class must be first type parameter
+                    if (extent.getTypeArguments().isPresent()) {
+                        return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(0).asString());
+                    }
+                    else {
+                        // visit interface to get information
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (domainClassOrInterfaceType != null) {
+                            return domainClassOrInterfaceType;
+                        }
                     }
             }
         }

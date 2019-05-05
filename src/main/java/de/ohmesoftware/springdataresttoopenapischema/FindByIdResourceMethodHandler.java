@@ -35,14 +35,18 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
 
     @Override
     public void addResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> addFindByIdOperation(compilationUnit, c)
         );
     }
 
     @Override
     public void removeResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> removeFindByOperation(compilationUnit, c)
         );
     }
@@ -59,10 +63,14 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
 
     private void addFindByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD, String.class.getName());
+        // check if this method is using a precise class
+        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
+            methodDeclaration = null;
+        }
         // add missing method automatically if extending CRUD interface
         if (methodDeclaration == null) {
-            ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
             if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+                ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
                 ClassOrInterfaceType idClass = getIDClass(compilationUnit, classOrInterfaceDeclaration);
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
                         FIND_BY_ID_METHOD, getOptionalWrapper(domainClassOrInterfaceType), new Parameter(

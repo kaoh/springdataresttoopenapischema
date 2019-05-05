@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Resource method handler for findById.
@@ -26,6 +25,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
     private static final String FIND_ALL_METHOD = "findAll";
     private static final String ITERABLE_CLASS = "java.lang.Iterable";
     private static final String PREDICATE_PARAM = "predicate";
+
     /**
      * Constructor.
      *
@@ -40,14 +40,18 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
 
     @Override
     public void addResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> addFindAllOperation(compilationUnit, c)
         );
     }
 
     @Override
     public void removeResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> removeFindAllOperation(compilationUnit, c)
         );
     }
@@ -84,6 +88,10 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, null));
         MethodDeclaration methodDeclaration = findClosestMethodFromMethodVariants(compilationUnit, classOrInterfaceDeclaration,
                 methodVariants);
+        // check if this method is using a precise class
+        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
+            methodDeclaration = null;
+        }
         // add missing method automatically if extending CRUD or QuerydslPredicator interface
         if (methodDeclaration == null) {
             ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
@@ -95,7 +103,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
                                 getClassOrInterfaceTypeFromClassName(compilationUnit, QUERYDSL_PREDICATE_CLASS), PREDICATE_PARAM),
                         new Parameter(
                                 getClassOrInterfaceTypeFromClassName(compilationUnit, PAGEABLE_CLASS), PAGEABLE_PARAM)
-                        );
+                );
             } else if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
                         FIND_ALL_METHOD, getWrapperForType(domainClassOrInterfaceType, PAGE_CLASS), new Parameter(

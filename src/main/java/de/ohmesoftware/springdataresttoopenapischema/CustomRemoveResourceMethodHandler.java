@@ -4,7 +4,6 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -36,14 +35,18 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     @Override
     public void addResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> addCustomRemoveOperations(compilationUnit, c)
         );
     }
 
     @Override
     public void removeResourceAnnotations() {
-        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(
+        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
+                c -> isConcreteRepositoryClass(compilationUnit, c)
+        ).forEach(
                 c -> removeCustomRemoveOperation(compilationUnit, c)
         );
     }
@@ -74,6 +77,11 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomRemoveOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
+        // check if this method is using a precise class
+        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
+            // add method to class
+            classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
+        }
         AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
                 classOrInterfaceDeclaration, methodDeclaration.getNameAsString());
         boolean exported = true;

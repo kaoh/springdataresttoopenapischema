@@ -17,7 +17,7 @@ import java.util.Optional;
  * (k_o_@users.sourceforge.net)</a>
  */
 @RepositoryRestResource
-public interface OrganisationRepository extends PagingAndSortingRepository<Organisation, String> {
+public interface OrganisationRepository extends MiddleRepository<Organisation> {
 
     @RestResource
     Iterable<Organisation> findAll(Sort sort);
