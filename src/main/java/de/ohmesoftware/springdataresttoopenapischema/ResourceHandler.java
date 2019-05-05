@@ -305,6 +305,8 @@ public abstract class ResourceHandler {
     protected String escapeString(String string) {
         return string.trim().replace("\n", SPACE_STRING).
                 replace("\r", EMPTY_STRING).
+                replace("<", "&lt;").
+                replace(">", "&gt;").
                 replace("\"", "\\\"").
                 replaceAll("\\s+", SPACE_STRING);
     }

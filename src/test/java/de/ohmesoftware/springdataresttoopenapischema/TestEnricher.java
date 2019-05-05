@@ -93,13 +93,12 @@ public class TestEnricher {
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users.\""));
-        assertTrue(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.User> findAll(com.querydsl.core.types.Predicate predicate, org.springframework.data.domain.Pageable pageable)"));
+        assertTrue(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.User> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"predicate\") com.querydsl.core.types.Predicate predicate, @io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"pageable\") org.springframework.data.domain.Pageable pageable)"));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page number to return.\")"));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page size.\")"));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, " +
-                "description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|organisation.*)=<value>,(asc|desc))*\")"));
-
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"emailAddress\", description = \"emailAddress search criteria. Syntax: emailAddress=&lt;value&gt;\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|organisation.*)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", description = \"The page number to return.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\")"));
     }
 
     @Test

@@ -12,6 +12,7 @@ Limitations:
 * PUT for creation is not documented. POST should be sufficient in all cases.
 * Only collection and item method resources are considered.
 * The resolution of class names only works if no wild card imports are used.
+* cCustom finder using pagination are not supported.
 
 # Usage
 

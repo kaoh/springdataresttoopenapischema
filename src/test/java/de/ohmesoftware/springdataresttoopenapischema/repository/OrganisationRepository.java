@@ -21,8 +21,8 @@ public interface OrganisationRepository extends PagingAndSortingRepository<Organ
 
     @RestResource
     @javax.ws.rs.GET()
-    @io.swagger.v3.oas.annotations.Operation(summary = "Finds all Organisations.", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "An organisation.", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = "application/json;charset=UTF-8", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = "application/hal+json;charset=UTF-8", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }) })
-    Iterable<Organisation> findAll(Sort sort);
+    @io.swagger.v3.oas.annotations.Operation(summary = "Finds all Organisations.", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = "sort", description = "The sorting criteria(s). Syntax: ((name)=&lt;value&gt;,(asc|desc))*", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }, responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "An organisation.", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = "application/json;charset=UTF-8", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = "application/hal+json;charset=UTF-8", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }) })
+    Iterable<Organisation> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = "sort") Sort sort);
 
     @RestResource(exported = false)
     Page<Organisation> findAll(Pageable pageable);

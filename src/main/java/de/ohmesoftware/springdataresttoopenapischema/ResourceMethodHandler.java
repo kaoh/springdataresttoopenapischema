@@ -46,6 +46,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String PARAMETER_REQUIRED = "required";
     protected static final String PARAMETER_IN = "in";
     protected static final String PARAMETER_NAME = "name";
+    protected static final String PARAMETER_HIDDEN = "hidden";
     protected static final String PARAMETER_IN_CLASS = "io.swagger.v3.oas.annotations.enums.ParameterIn";
     protected static final String PARAMETER_IN_QUERY = "QUERY";
 
@@ -126,6 +127,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return classOrInterfaceType;
     }
 
+    protected List<String> getMethodParameterTypes(MethodDeclaration methodDeclaration) {
+        return methodDeclaration.getParameters().stream().map(n -> n.getType().asString()).collect(Collectors.toList());
+    }
+
     // annotations
 
     protected void addMarkerAnnotation(BodyDeclaration<?> bodyDeclaration,
@@ -138,7 +143,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected List<NormalAnnotationExpr> getPageableParams(MethodDeclaration methodDeclaration,
                                                            ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
         return methodDeclaration.getParameters().stream().filter(p ->
-                p.getName().getIdentifier().equals(getSimpleNameFromClass(PAGEABLE_CLASS))).
+                p.getType().asString().endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))).
                 findFirst().
                 map(p -> {
                             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>(addSortParams(compilationUnit, sortingDomainClassOrInterfaceDeclaration));
@@ -160,8 +165,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                                             )
                                                     ))),
                                             new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                                    new NodeList<>(Collections.singleton(
-                                                            new MemberValuePair(SIZE_PARAMETER_NAME,
+                                                    new NodeList<>(Arrays.asList(
+                                                            new MemberValuePair(PARAMETER_NAME,
+                                                                    new StringLiteralExpr(SIZE_PARAMETER_NAME)
+                                                            ),
+                                                            new MemberValuePair(PARAMETER_DESCRIPTION,
                                                                     new StringLiteralExpr(
                                                                             escapeString("The page size.")
                                                                     ))
@@ -201,7 +209,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                                        ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration) {
         List<String> searchParams = getSearchParametersFromClassOrInterface(compilationUnit, predicateDomainClassOrInterfaceDeclaration);
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
-                p.getName().getIdentifier().equals(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS)))) {
+                p.getType().asString().endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS)))) {
             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>();
             searchParams.forEach(
                     p ->
@@ -232,7 +240,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected List<NormalAnnotationExpr> getSortParams(CompilationUnit compilationUnit, MethodDeclaration methodDeclaration,
                                                        ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
         if (methodDeclaration.getParameters().stream().filter(p ->
-                p.getName().getIdentifier().equals(getSimpleNameFromClass(SORT_CLASS))).findAny().isPresent()) {
+                p.getType().asString().endsWith(getSimpleNameFromClass(SORT_CLASS))).findAny().isPresent()) {
             return addSortParams(compilationUnit, sortingDomainClassOrInterfaceDeclaration);
         }
         return Collections.emptyList();
@@ -264,6 +272,37 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                         )
                                 ))
                         ));
+    }
+
+    protected void hidePageableSortAndPredicateMethodParameters(MethodDeclaration methodDeclaration) {
+        methodDeclaration.getParameters().stream().filter(p -> QUERYDSL_PREDICATE_CLASS.endsWith(p.getType().asString())).
+                forEach(p -> addParameterHideAnnotation(methodDeclaration, p.getNameAsString()));
+        methodDeclaration.getParameters().stream().filter(p -> SORT_CLASS.endsWith(p.getType().asString())).
+                forEach(p -> addParameterHideAnnotation(methodDeclaration, p.getNameAsString()));
+        methodDeclaration.getParameters().stream().filter(p -> PAGEABLE_CLASS.endsWith(p.getType().asString())).
+                forEach(p -> addParameterHideAnnotation(methodDeclaration, p.getNameAsString()));
+    }
+
+    protected List<NormalAnnotationExpr> getPageableSortingAndPredicateParameterAnnotations(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                           List<String> methodParameterClasses) {
+        List<NormalAnnotationExpr> parameters = new ArrayList<>();
+        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+                parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
+        for (String paramClass : methodParameterClasses) {
+            if (paramClass.endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))) {
+                parameters.addAll(getPageableParams(methodDeclaration,
+                        compilationUnitClassOrInterfaceDeclarationPair.b));
+            }
+            else if (paramClass.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
+                parameters.addAll(getPredicateParams(compilationUnit, methodDeclaration,
+                        compilationUnitClassOrInterfaceDeclarationPair.b));
+            }
+            else if (paramClass.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
+                parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
+                        compilationUnitClassOrInterfaceDeclarationPair.b));
+            }
+        }
+        return parameters;
     }
 
     protected void addPathParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required,
@@ -299,6 +338,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             methodDeclaration.getParameters().stream().filter(p -> p.getNameAsString().equals(parameterName)).
                     forEach(p -> p.addAnnotation(openApiAnnotationExpr));
         }
+    }
+
+    protected void addParameterHideAnnotation(MethodDeclaration methodDeclaration, String parameterName) {
+            NormalAnnotationExpr openApiAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS), new NodeList<>());
+                openApiAnnotationExpr.addPair(PARAMETER_HIDDEN, new BooleanLiteralExpr(true));
+                openApiAnnotationExpr.addPair(PARAMETER_NAME, new StringLiteralExpr(escapeString(parameterName)));
+            methodDeclaration.getParameters().stream().filter(p -> p.getNameAsString().equals(parameterName)).
+                    forEach(p -> p.addAnnotation(openApiAnnotationExpr));
     }
 
     protected NormalAnnotationExpr createSchemaAnnotation(String domainClass) {
@@ -372,7 +419,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         Optional<AnnotationExpr> jsonPropertyAnnotationExpr = fieldDeclaration.getAnnotationByName(getSimpleNameFromClass(JSON_PROPERTY_CLASS));
         return jsonPropertyAnnotationExpr.filter(annotationExpr -> ((NormalAnnotationExpr) annotationExpr).getPairs().stream().
-                anyMatch(p -> p.getName().getIdentifier().equals(JSON_PROPERTY_ACCESS) &&
+                anyMatch(p -> p.getName().asString().endsWith(JSON_PROPERTY_ACCESS) &&
                         p.getValue().asFieldAccessExpr().getName().asString().
                                 equals(JSON_PROPERTY_WRITE_ONLY))).isPresent();
     }

@@ -105,7 +105,8 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration == null) {
             return;
         }
-        List<String> params = methodDeclaration.getParameters().stream().map(n -> n.getType().asString()).collect(Collectors.toList());
+        List<String> params = getMethodParameterTypes(methodDeclaration);
+        hidePageableSortAndPredicateMethodParameters(methodDeclaration);
         AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
                 FIND_ALL_METHOD, params.toArray(new String[0]));
         // if resource is null take default empty path and it is exported
@@ -123,24 +124,8 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             if (methodPath != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }
-            List<NormalAnnotationExpr> parameters = new ArrayList<>();
-            Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                    parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
-
-            for (String param : params) {
-                if (param.equals(getSimpleNameFromClass(PAGEABLE_CLASS))) {
-                    parameters.addAll(getPageableParams(methodDeclaration,
-                            compilationUnitClassOrInterfaceDeclarationPair.b));
-                }
-                else if (param.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
-                    parameters.addAll(getPredicateParams(compilationUnit, methodDeclaration,
-                            compilationUnitClassOrInterfaceDeclarationPair.b));
-                }
-                else if (param.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
-                    parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
-                            compilationUnitClassOrInterfaceDeclarationPair.b));
-                }
-            }
+            List<NormalAnnotationExpr> parameters = getPageableSortingAndPredicateParameterAnnotations(methodDeclaration,
+                    classOrInterfaceDeclaration, params);
             addGETAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration, parameters,
                     null,
