@@ -24,6 +24,9 @@ and `path` set.
   * The `Operation` summary is using the first part of the comment.
   * The `Operation` description is using any text after a paragraph `<p>`
   * `@param` tags are used for the `@Parameter` description.
+* Mark overridden method from the `CrudRepository`, `PagingAndSortingRepository` and `QuerydslPredicateExecutor` with 
+  `@RestResource`, otherwise they will be removed in the next run 
+* `findById`, `findAll` and `deleteById` are using default description if not explicitly defined.
 * Because PUT for updates and POST for creations are using both the `save` method it cannot be detected which one
 to be documented. Use the same method signature as `save` method and name the methods `create` 
 and `update`. E.g.:

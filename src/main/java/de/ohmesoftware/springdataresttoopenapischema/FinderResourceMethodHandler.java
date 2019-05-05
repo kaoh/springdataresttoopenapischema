@@ -4,6 +4,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.utils.Pair;
@@ -23,7 +24,6 @@ import java.util.stream.Collectors;
 public class FinderResourceMethodHandler extends ResourceMethodHandler {
 
     private static final String FIND_ALL_METHOD = "findAll";
-    private static final String QUERYDSL_PREDICATE_CLASS = "com.querydsl.core.types.Predicate";
     private static final String ITERABLE_CLASS = "java.lang.Iterable";
     private static final String PREDICATE_PARAM = "predicate";
     /**
@@ -54,19 +54,33 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void removeFindAllOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
-                FIND_ALL_METHOD);
+                FIND_ALL_METHOD, QUERYDSL_PREDICATE_CLASS, PAGEABLE_CLASS);
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeQuerydslOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
         }
+        methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+                FIND_ALL_METHOD, PAGEABLE_CLASS);
+        if (methodDeclaration != null) {
+            removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
+            removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
+            removeCrudOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
+        }
+        methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+                FIND_ALL_METHOD, SORT_CLASS);
+        if (methodDeclaration != null) {
+            removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
+            removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
+            removeCrudOperationAnnotationAndMethod(methodDeclaration, compilationUnit, classOrInterfaceDeclaration);
+        }
     }
 
     private void addFindAllOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         List<Pair<String, List<String>>> methodVariants = new ArrayList<>();
-        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Arrays.asList(PREDICATE_PARAM, PAGEABLE_PARAM)));
-        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(PAGEABLE_PARAM)));
-        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(SORT_PARAM)));
+        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Arrays.asList(QUERYDSL_PREDICATE_CLASS, PAGEABLE_CLASS)));
+        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(PAGEABLE_CLASS)));
+        methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(SORT_CLASS)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, null));
         MethodDeclaration methodDeclaration = findClosestMethodFromMethodVariants(compilationUnit, classOrInterfaceDeclaration,
                 methodVariants);
@@ -91,8 +105,8 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration == null) {
             return;
         }
-        List<String> params = methodDeclaration.getParameters().stream().map(n -> n.getName().asString()).collect(Collectors.toList());
-        NormalAnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+        List<String> params = methodDeclaration.getParameters().stream().map(n -> n.getType().asString()).collect(Collectors.toList());
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
                 FIND_ALL_METHOD, params.toArray(new String[0]));
         // if resource is null take default empty path and it is exported
         boolean exported = true;
@@ -114,22 +128,22 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
                     parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
 
             for (String param : params) {
-                switch (param) {
-                    case PREDICATE_PARAM:
-                    case PAGEABLE_PARAM:
-                        parameters.addAll(getPageableParams(methodDeclaration,
-                                compilationUnitClassOrInterfaceDeclarationPair.b));
-                        break;
-                    case SORT_PARAM:
-                        parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
-                                compilationUnitClassOrInterfaceDeclarationPair.b));
-                        break;
+                if (param.equals(getSimpleNameFromClass(PAGEABLE_CLASS))) {
+                    parameters.addAll(getPageableParams(methodDeclaration,
+                            compilationUnitClassOrInterfaceDeclarationPair.b));
+                }
+                else if (param.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
+                    parameters.addAll(getPredicateParams(compilationUnit, methodDeclaration,
+                            compilationUnitClassOrInterfaceDeclarationPair.b));
+                }
+                else if (param.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
+                    parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
+                            compilationUnitClassOrInterfaceDeclarationPair.b));
                 }
             }
             addGETAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration, parameters,
-                    createRequestBodyAnnotation(compilationUnit,
-                    classOrInterfaceDeclaration),
+                    null,
                     Collections.singletonList(
                             createApiResponseAnnotation200WithContent(compilationUnit,
                                     classOrInterfaceDeclaration)),

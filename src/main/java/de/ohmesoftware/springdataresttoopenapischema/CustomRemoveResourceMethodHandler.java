@@ -3,6 +3,7 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 
 import java.util.ArrayList;
@@ -58,7 +59,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private void removeCustomRemoveOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (MethodDeclaration methodDeclaration : getCustomFinderMethods(compilationUnit, classOrInterfaceDeclaration)) {
-            removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
+            removeMethodParameterAnnotation(methodDeclaration, JAXRS_QUERY_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeJaxRsAnnotations(compilationUnit, methodDeclaration);
             removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
@@ -73,7 +74,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomRemoveOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
-        NormalAnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
                 classOrInterfaceDeclaration, methodDeclaration.getNameAsString());
         boolean exported = true;
         String methodPath = getMethodPath(methodDeclaration);

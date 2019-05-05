@@ -5,6 +5,7 @@ import de.ohmesoftware.springdataresttoopenapischema.repository.UserRepository;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import java.io.File;
 import java.io.FileReader;
@@ -24,7 +25,7 @@ public class TestEnricher {
         return "src/test/java/" + classOrPackageName.replace(".", "/");
     }
 
-    @After
+    @Before
     public void after() throws Exception {
         FileUtils.copyFile(new File(buildPath(UserRepository.class.getName()) + ".bak"), new File(buildPath(UserRepository.class.getName()) + ".java"));
         FileUtils.copyFile(new File(buildPath(OrganisationRepository.class.getName()) + ".bak"), new File(buildPath(OrganisationRepository.class.getName()) + ".java"));
@@ -97,7 +98,7 @@ public class TestEnricher {
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page number to return.\")"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, description = \"The page size.\")"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, " +
-                "description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|extra|organisation.*)=<value>,(asc|desc))*\")"));
+                "description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|organisation.*)=<value>,(asc|desc))*\")"));
 
     }
 

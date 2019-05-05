@@ -39,13 +39,13 @@ public abstract class ResourceHandler {
 
     private static final String QUOTATION_MARK_STRING = "\"";
 
-    private static final String DOT = ".";
+    protected static final String DOT = ".";
     protected static final String PLURAL_S = "s";
     protected static final String SLASH = "/";
     private static final String JAVA_EXT = ".java";
 
     protected static final String PAGING_AND_SORTING_REPOSITORY = "PagingAndSortingRepository";
-    protected static final String QUERY_DSL_PREDICATE_EXECUTOR = "QuerydslPredicateExecutor";
+    protected static final String QUERYDSL_PREDICATE_EXECUTOR = "QuerydslPredicateExecutor";
     protected static final String CRUD_REPOSITORY = "CrudRepository";
     protected static final String REPOSITORY = "Repository";
 
@@ -210,7 +210,7 @@ public abstract class ResourceHandler {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             switch (extent.getName().getIdentifier()) {
                 case PAGING_AND_SORTING_REPOSITORY:
-                case QUERY_DSL_PREDICATE_EXECUTOR:
+                case QUERYDSL_PREDICATE_EXECUTOR:
                 case REPOSITORY:
                 case CRUD_REPOSITORY:
                     if (!extent.getTypeArguments().isPresent()) {

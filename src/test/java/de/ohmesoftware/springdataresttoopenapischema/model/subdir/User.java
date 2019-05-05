@@ -1,5 +1,6 @@
 package de.ohmesoftware.springdataresttoopenapischema.model.subdir;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
@@ -46,6 +47,7 @@ public class User {
 
     public int failedLoginAttempts;
 
+    @JsonIgnore
     public String extra;
 
     public Organisation organisation;

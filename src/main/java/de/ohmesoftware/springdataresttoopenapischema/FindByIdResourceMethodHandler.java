@@ -4,6 +4,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
@@ -47,7 +48,8 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
     }
 
     private void removeFindByOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD, String.class.getSimpleName());
+        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+                FIND_BY_ID_METHOD, String.class.getName());
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
@@ -56,7 +58,7 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
     }
 
     private void addFindByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD, String.class.getSimpleName());
+        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD, String.class.getName());
         // add missing method automatically if extending CRUD interface
         if (methodDeclaration == null) {
             ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
@@ -70,8 +72,8 @@ public class FindByIdResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration == null) {
             return;
         }
-        NormalAnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD,
-                String.class.getSimpleName());
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration, FIND_BY_ID_METHOD,
+                String.class.getName());
         // if resource is null take default empty path and it is exported
         boolean exported = true;
         // this has no special sub path
