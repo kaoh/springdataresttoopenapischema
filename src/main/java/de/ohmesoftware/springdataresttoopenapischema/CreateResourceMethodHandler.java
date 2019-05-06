@@ -8,19 +8,18 @@ import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.VoidType;
 
+import java.util.Collections;
+
 /**
- * Resource method handler for findById and deleteById.
+ * Resource method handler for create.
  *
  * @author <a href="mailto:karsten@simless.com">Karsten Ohme
  * (karsten@simless.com)</a>
  */
-public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHandler {
+public class CreateResourceMethodHandler extends ResourceMethodHandler {
 
-    private static final String METHOD_BY_ID_PARAM = "id";
-
-    private String methodByIdName;
-
-    private boolean returnVoid;
+    private static final String SAVE_METHOD = "save";
+    private static final String SAVE_METHOD_PARAM = "entity";
 
     /**
      * Constructor.
@@ -29,15 +28,10 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
-     * @param methodByIdName  The method name.
-     * @param returnVoid      <code>true</code> if the method returns void.
      */
-    protected MethodByIdResourceMethodHandler(String sourceFile, String sourcePath, String basePath,
-                                              CompilationUnit compilationUnit,
-                                              String methodByIdName, boolean returnVoid) {
+    protected CreateResourceMethodHandler(String sourceFile, String sourcePath, String basePath,
+                                          CompilationUnit compilationUnit) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
-        this.methodByIdName = methodByIdName;
-        this.returnVoid = returnVoid;
     }
 
     @Override
@@ -45,7 +39,7 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
                 c -> isConcreteRepositoryClass(compilationUnit, c)
         ).forEach(
-                c -> addMethodByIdOperation(compilationUnit, c)
+                c -> addCreateOperation(compilationUnit, c)
         );
     }
 
@@ -54,13 +48,14 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
                 c -> isConcreteRepositoryClass(compilationUnit, c)
         ).forEach(
-                c -> removeMethodIdByOperation(compilationUnit, c)
+                c -> removeCreateOperation(compilationUnit, c)
         );
     }
 
-    private void removeMethodIdByOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    private void removeCreateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
         MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
-                methodByIdName, String.class.getName());
+                SAVE_METHOD, domainClassOrInterfaceType.asString());
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
@@ -68,8 +63,10 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         }
     }
 
-    private void addMethodByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, methodByIdName, String.class.getName());
+    private void addCreateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
+        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, SAVE_METHOD,
+                domainClassOrInterfaceType.asString());
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             methodDeclaration = null;
@@ -77,18 +74,15 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         // add missing method automatically if extending CRUD interface
         if (methodDeclaration == null) {
             if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
-                ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-                ClassOrInterfaceType idClass = getIDClass(compilationUnit, classOrInterfaceDeclaration);
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
-                        methodByIdName, returnVoid ? new VoidType() : getOptionalWrapper(domainClassOrInterfaceType), new Parameter(
-                                idClass, METHOD_BY_ID_PARAM));
+                        SAVE_METHOD, domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, SAVE_METHOD_PARAM));
             }
         }
         if (methodDeclaration == null) {
             return;
         }
-        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration, methodByIdName,
-                String.class.getName());
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+                SAVE_METHOD, domainClassOrInterfaceType.asString());
         // if resource is null take default empty path and it is exported
         boolean exported = true;
         // this has no special sub path
@@ -104,11 +98,17 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
             if (methodPath != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }
-            addPathParamAnnotation(methodDeclaration, METHOD_BY_ID_PARAM, true, "The database id.");
-            additionalMethodByIdOperation(methodDeclaration, classOrInterfaceDeclaration);
+            addPOSTAnnotation(methodDeclaration);
+            addOperationAnnotation(methodDeclaration,
+                    createRequestBodyAnnotation(compilationUnit, classOrInterfaceDeclaration),
+                    Collections.singletonList(
+                            createApiResponseAnnotation201WithContent(compilationUnit,
+                                    classOrInterfaceDeclaration)),
+                    String.format("Creates a %s.",
+                            getSimpleNameFromClass(
+                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
         }
     }
 
-    protected abstract void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration);
 
 }

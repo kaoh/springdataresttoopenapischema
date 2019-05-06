@@ -117,7 +117,6 @@ public class TestEnricher {
         assertTrue(newContent.contains("parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }"));
     }
 
-
     @Test
     public void testDeleteByIdEnricher() throws Exception {
         Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
@@ -126,5 +125,15 @@ public class TestEnricher {
         assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes a(n) Organisation by its id.\", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }), responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") })"));
         assertTrue(newContent.contains("void deleteById(@javax.ws.rs.PathParam(value = \"id\") @io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The database id.\") java.lang.String id)"));
+    }
+
+    @Test
+    public void testCreateEnricher() throws Exception {
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@javax.ws.rs.POST"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Creates a Organisation.\", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }), responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"201\", description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }) })"));
+        assertTrue(newContent.contains("de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation save(de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation entity)"));
     }
 }
