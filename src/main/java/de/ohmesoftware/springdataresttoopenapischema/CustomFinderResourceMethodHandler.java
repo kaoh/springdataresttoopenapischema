@@ -73,9 +73,9 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomFinderOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
-        // check if this method is using a precise class
+        // check if this method is belonging to a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
-            // add method to class
+            // add method to class the search started
             classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
         }
         AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,

@@ -6,10 +6,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.PrimitiveType;
-import com.github.javaparser.ast.type.Type;
-import com.github.javaparser.ast.type.TypeParameter;
+import com.github.javaparser.ast.type.*;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
 
@@ -32,10 +29,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String OPERATION_PARAMETERS = "parameters";
 
     protected static final String SCHEMA_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Schema";
+    protected static final String ARRAY_SCHEMA_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.ArraySchema";
     protected static final String SCHEMA_IMPLEMENTATION = "implementation";
     protected static final String CONTENT_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Content";
     protected static final String CONTENT_MEDIATYPE = "mediaType";
     protected static final String CONTENT_SCHEMA = "schema";
+    protected static final String CONTENT_ARRAY = "array";
     protected static final String MEDIATYPE_JSON = "application/json;charset=UTF-8";
     protected static final String MEDIATYPE_JSON_HAL = "application/hal+json;charset=UTF-8";
     protected static final String REQUEST_BODY_CLASS = "io.swagger.v3.oas.annotations.parameters.RequestBody";
@@ -51,6 +50,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String PARAMETER_HIDDEN = "hidden";
     protected static final String PARAMETER_IN_CLASS = "io.swagger.v3.oas.annotations.enums.ParameterIn";
     protected static final String PARAMETER_IN_QUERY = "QUERY";
+
 
     protected static final String JAXRS_GET_CLASS = "javax.ws.rs.GET";
     protected static final String JAXRS_POST_CLASS = "javax.ws.rs.POST";
@@ -78,6 +78,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String JSON_IGNORE_CLASS = "com.fasterxml.jackson.annotation.JsonIgnore";
 
     protected static final String QUERYDSL_PREDICATE_CLASS = "com.querydsl.core.types.Predicate";
+    protected static final String PRODUCES_CLASS = "javax.ws.rs.Produces";
+    protected static final String ANNOTATION_VALUE = "value";
 
 
     // TODO: maybe this can be improved without artificial methods
@@ -131,6 +133,16 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected List<String> getMethodParameterTypes(MethodDeclaration methodDeclaration) {
         return methodDeclaration.getParameters().stream().map(n -> n.getType().asString()).collect(Collectors.toList());
+    }
+
+    protected boolean isIterableReturnType(MethodDeclaration methodDeclaration) {
+        return methodDeclaration.getType().isClassOrInterfaceType()
+        && methodDeclaration.getType().asClassOrInterfaceType().getName().asString().endsWith(getSimpleNameFromClass(Iterable.class.getName()));
+    }
+
+    protected boolean isPageReturnType(MethodDeclaration methodDeclaration) {
+        return methodDeclaration.getType().isClassOrInterfaceType()
+                && methodDeclaration.getType().asClassOrInterfaceType().getName().asString().endsWith(getSimpleNameFromClass(PAGE_CLASS));
     }
 
     // annotations
@@ -348,6 +360,15 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 forEach(p -> p.addAnnotation(openApiAnnotationExpr));
     }
 
+    protected void addJaxRsProducesAnnotation(MethodDeclaration methodDeclaration, String... contentTypes) {
+        NormalAnnotationExpr jaxRsProducesAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(PRODUCES_CLASS),
+                new NodeList<>(Collections.singletonList(new MemberValuePair(ANNOTATION_VALUE,
+                        new ArrayInitializerExpr(new NodeList(
+                                Arrays.asList(contentTypes).stream().map(c -> new StringLiteralExpr(c)).collect(Collectors.toList())
+                        ))))));
+        methodDeclaration.addAnnotation(jaxRsProducesAnnotationExpr);
+    }
+
     protected NormalAnnotationExpr createSchemaAnnotation(String domainClass) {
         return new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
                 new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_IMPLEMENTATION,
@@ -360,6 +381,28 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                         new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(mediaType)),
                         new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr)
                 )));
+    }
+
+    protected NormalAnnotationExpr createListContentAnnotation(NormalAnnotationExpr schemaAnnotationExpr, String mediaType) {
+        return new NormalAnnotationExpr(getNameFromClass(CONTENT_ANNOTATION_CLASS),
+                new NodeList<>(Arrays.asList(
+                        new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(mediaType)),
+                        new MemberValuePair(CONTENT_ARRAY,
+                                new NormalAnnotationExpr(getNameFromClass(ARRAY_SCHEMA_ANNOTATION_CLASS),
+                                        new NodeList<>(Collections.singleton(
+                                                new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr))
+                                        ))
+                        ))));
+    }
+
+    protected MemberValuePair createContentAnnotationMemberForListType(ClassOrInterfaceType classOrInterfaceType) {
+        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
+        NormalAnnotationExpr contentJsonAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
+        NormalAnnotationExpr contentJsonHalAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
+        return new MemberValuePair(REQUEST_BODY_API_RESPONSE_CONTENT,
+                new ArrayInitializerExpr(
+                        new NodeList<>(Arrays.asList(contentJsonAnnotationExpr, contentJsonHalAnnotationExpr))
+                ));
     }
 
     protected MemberValuePair createContentAnnotationMemberForType(ClassOrInterfaceType classOrInterfaceType) {
@@ -387,13 +430,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentAnnotation(int statusCode,
                                                                                        String summary,
-                                                                                       MemberValuePair contentAnnotationmemberValuePair) {
+                                                                                       MemberValuePair contentAnnotationMemberValuePair) {
         return new NormalAnnotationExpr(getNameFromClass(API_RESPONSE_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(API_RESPONSE_RESPONSE_CODE, new StringLiteralExpr(Integer.toString(statusCode))),
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(
                                 escapeString(summary))),
-                        contentAnnotationmemberValuePair
+                        contentAnnotationMemberValuePair
                 )));
     }
 
@@ -484,6 +527,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 )));
     }
 
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForListType(ClassOrInterfaceType classOrInterfaceType) {
+        return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
+                createContentAnnotationMemberForListType(classOrInterfaceType));
+    }
+
     protected NormalAnnotationExpr createApiResponseAnnotation200WithContent(CompilationUnit compilationUnit,
                                                                              ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         return createApiResponseAnnotation20xWithContent(compilationUnit, classOrInterfaceDeclaration, 200);
@@ -503,7 +551,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected MethodDeclaration addInterfaceMethod(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
-                                                   String methodName, ClassOrInterfaceType returnType,
+                                                   String methodName, Type returnType,
                                                    Parameter... parameters) {
         return classOrInterfaceDeclaration.addMethod(methodName,
                 Modifier.Keyword.PUBLIC).setParameters(
@@ -628,7 +676,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             return;
         }
         if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
-            // if a resource annotation was added it is marked as user added method
+            // if a resource annotation was added it is marked as user added method and will not be removed
             if (!checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
             }
@@ -683,9 +731,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     /**
-     * Checks if this class has concrete type.
+     * Checks if this class has a concrete type.
      *
-     * @param compilationUnit The compilation unit.
+     * @param compilationUnit             The compilation unit.
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @return <code>true</code> if the repository is not generic.
      */
@@ -693,16 +741,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (!checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
             return false;
         }
-        NodeList<TypeParameter> typeParameters = classOrInterfaceDeclaration.getTypeParameters();
-        // concrete repositories have no types
-        if (typeParameters.isEmpty()) {
-            return true;
-        }
-        return false;
+       return isConcreteClass(classOrInterfaceDeclaration);
     }
 
     /**
-     * Checks if this class has concrete type.
+     * Checks if this class has a concrete type.
      *
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @return <code>true</code> if the repository is not generic.

@@ -93,7 +93,8 @@ public class TestEnricher {
         Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users.\""));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users and returns the result paginated.\""));
+        assertTrue(newContent.contains("@javax.ws.rs.Produces(value = { \"application/json;charset=UTF-8\", \"application/hal+json;charset=UTF-8\" })"));
         assertTrue(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.User> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"predicate\") com.querydsl.core.types.Predicate predicate, @io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"pageable\") org.springframework.data.domain.Pageable pageable)"));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"emailAddress\", description = \"emailAddress search criteria. Syntax: emailAddress=&lt;value&gt;\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
@@ -106,15 +107,24 @@ public class TestEnricher {
     public void testFindersEnrichExistingQuerydslFinder() throws Exception {
         Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
-        String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Users.\""));
-        assertTrue(newContent.contains("Iterable<Organisation> findAll(Sort sort)"));
-        assertFalse(newContent.contains("org.springframework.data.domain.Page<de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation> findAll(org.springframework.data.domain.Pageable pageable)"));
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Finds all Organisations and returns the result as array.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }, responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class))) }) })"));
+        assertTrue(newContent.contains("Iterable<Organisation> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"sort\") Sort sort)"));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
+        assertTrue(newContent.contains("ArraySchema"));
         assertFalse(newContent.contains("name = \"page\""));
         assertFalse(newContent.contains("name = \"size\""));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY, " +
-                "description = \"The sorting criteria(s). Syntax: ((name)=<value>,(asc|desc))*\")"));
+        assertTrue(newContent.contains("parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }"));
+    }
 
+
+    @Test
+    public void testDeleteByIdEnricher() throws Exception {
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes a(n) Organisation by its id.\", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }), responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") })"));
+        assertTrue(newContent.contains("void deleteById(@javax.ws.rs.PathParam(value = \"id\") @io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The database id.\") java.lang.String id)"));
     }
 }

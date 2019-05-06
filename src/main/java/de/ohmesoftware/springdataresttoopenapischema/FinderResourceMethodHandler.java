@@ -92,9 +92,9 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             methodDeclaration = null;
         }
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
         // add missing method automatically if extending CRUD or QuerydslPredicator interface
         if (methodDeclaration == null) {
-            ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
             // query dsl has preference
             if (checkIfExtendingQuerydslInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
@@ -135,14 +135,25 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             List<NormalAnnotationExpr> parameters = getPageableSortingAndPredicateParameterAnnotations(methodDeclaration,
                     classOrInterfaceDeclaration, params);
             addGETAnnotation(methodDeclaration);
+            List<NormalAnnotationExpr> responses = null;
+            String defaultDescription = null;
+            if (isIterableReturnType(methodDeclaration)) {
+                responses = Collections.singletonList(
+                        createApiResponseAnnotation200WithContentForListType(domainClassOrInterfaceType));
+                defaultDescription = String.format("Finds all %s%s and returns the result as array.",
+                        getSimpleNameFromClass(
+                                getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString()), PLURAL_S);
+            }
+            else if (isPageReturnType(methodDeclaration)) {
+                defaultDescription = String.format("Finds all %s%s and returns the result paginated.",
+                        getSimpleNameFromClass(
+                                getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString()), PLURAL_S);
+                addJaxRsProducesAnnotation(methodDeclaration, MEDIATYPE_JSON, MEDIATYPE_JSON_HAL);
+            }
             addOperationAnnotation(methodDeclaration, parameters,
                     null,
-                    Collections.singletonList(
-                            createApiResponseAnnotation200WithContent(compilationUnit,
-                                    classOrInterfaceDeclaration)),
-                    String.format("Finds all %s%s.",
-                            getSimpleNameFromClass(
-                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString()), PLURAL_S));
+                    responses,
+                    defaultDescription);
         }
     }
 

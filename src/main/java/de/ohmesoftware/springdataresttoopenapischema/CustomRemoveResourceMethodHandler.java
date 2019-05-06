@@ -18,6 +18,7 @@ import java.util.List;
 public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private static final String CUSTOM_DELETE_METHOD_PREFIX = "deleteBy";
+    private static final String DELETE_BY_ID_METHOD = "deleteById";
     private static final String CUSTOM_REMOVE_METHOD_PREFIX = "removeBy";
     private static final String SEARCH_PATH = "search" + SLASH;
 
@@ -54,9 +55,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
     private List<MethodDeclaration> getCustomFinderMethods(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         List<MethodDeclaration> methodDeclarations = new ArrayList<>();
         methodDeclarations.addAll(findCustomMethods(compilationUnit, classOrInterfaceDeclaration, CUSTOM_REMOVE_METHOD_PREFIX,
-                Collections.emptySet()));
+                Collections.singleton(DELETE_BY_ID_METHOD)));
         methodDeclarations.addAll(findCustomMethods(compilationUnit, classOrInterfaceDeclaration, CUSTOM_DELETE_METHOD_PREFIX,
-                Collections.emptySet()));
+                Collections.singleton(DELETE_BY_ID_METHOD)));
         return methodDeclarations;
     }
 
