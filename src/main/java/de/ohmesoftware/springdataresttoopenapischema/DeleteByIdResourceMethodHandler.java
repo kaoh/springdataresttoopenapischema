@@ -34,11 +34,11 @@ public class DeleteByIdResourceMethodHandler extends MethodByIdResourceMethodHan
     @Override
     protected void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         addDELETEAnnotation(methodDeclaration);
-        addOperationAnnotation(methodDeclaration, createRequestBodyAnnotation(compilationUnit,
-                classOrInterfaceDeclaration),
+        addOperationAnnotation(methodDeclaration,
+                null,
                 Collections.singletonList(
                         createApiResponse204()),
-                String.format("Deletes a(n) %s by its id.",
+                String.format("Deletes a %s by its id.",
                         getSimpleNameFromClass(
                                 getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
     }

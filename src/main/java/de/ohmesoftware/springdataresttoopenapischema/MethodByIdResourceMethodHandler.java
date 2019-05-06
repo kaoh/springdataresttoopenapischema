@@ -18,6 +18,8 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
 
     private static final String METHOD_BY_ID_PARAM = "id";
 
+    private static final String ID_PATH = "{id}";
+
     private String methodByIdName;
 
     private boolean returnVoid;
@@ -92,17 +94,17 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         // if resource is null take default empty path and it is exported
         boolean exported = true;
         // this has no special sub path
-        String methodPath = null;
+        String methodPath = ID_PATH;
         if (methodResource != null) {
             exported = checkResourceExported(methodResource);
             String _path = getResourcePath(methodResource);
             if (_path != null) {
-                methodPath = _path;
+                methodPath = _path + ID_PATH;
             }
         }
         if (exported) {
             if (methodPath != null) {
-                addPathAnnotation(classOrInterfaceDeclaration, methodPath);
+                addPathAnnotation(methodDeclaration, methodPath);
             }
             addPathParamAnnotation(methodDeclaration, METHOD_BY_ID_PARAM, true, "The database id.");
             additionalMethodByIdOperation(methodDeclaration, classOrInterfaceDeclaration);

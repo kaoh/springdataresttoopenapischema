@@ -31,12 +31,12 @@ public class FindByIdResourceMethodHandler extends MethodByIdResourceMethodHandl
     @Override
     protected void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         addGETAnnotation(methodDeclaration);
-        addOperationAnnotation(methodDeclaration, createRequestBodyAnnotation(compilationUnit,
-                classOrInterfaceDeclaration),
+        addOperationAnnotation(methodDeclaration,
+                null,
                 Collections.singletonList(
                         createApiResponseAnnotation200WithContent(compilationUnit,
                                 classOrInterfaceDeclaration)),
-                String.format("Gets a(n) %s by its id.",
+                String.format("Gets a %s by its id.",
                         getSimpleNameFromClass(
                                 getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
     }

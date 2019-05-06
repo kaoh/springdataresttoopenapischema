@@ -40,16 +40,12 @@ public class TestEnricher {
         assertTrue(newContent.contains("package de.ohmesoftware.springdataresttoopenapischema.repository;"));
         assertTrue(newContent.contains("java.util.Optional<de.ohmesoftware.springdataresttoopenapischema.model.subdir.User> findById("));
         assertTrue(newContent.contains("@javax.ws.rs.Path(\"/people\""));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Gets a(n) User by its id.\""));
+        assertTrue(newContent.contains("@javax.ws.rs.Path(\"/{id}\")"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Gets a User by its id.\""));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The database id.\")"));
         assertTrue(newContent.contains("javax.ws.rs.PathParam(value = \"id\""));
-        assertTrue(newContent.contains("requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = " +
-                "\"A user being able to log-in.\", content = { @io.swagger.v3.oas.annotations.media.Content(" +
-                "mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(" +
-                "implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)), @io.swagger.v3.oas.annotations.media.Content(" +
-                "mediaType = \"application/hal+json;charset=UTF-8\", " +
-                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)) })"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Gets a User by its id.\", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"A user being able to log-in.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.User.class)) }) })"));
         assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", " +
                 "description = \"A user being able to log-in.\", content = { " +
                 "@io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", " +
@@ -123,7 +119,7 @@ public class TestEnricher {
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes a(n) Organisation by its id.\", requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class)) }), responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") })"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes a Organisation by its id.\", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"204\", description = \"No Content.\") })"));
         assertTrue(newContent.contains("void deleteById(@javax.ws.rs.PathParam(value = \"id\") @io.swagger.v3.oas.annotations.Parameter(required = true, description = \"The database id.\") java.lang.String id)"));
     }
 
