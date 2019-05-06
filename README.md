@@ -12,16 +12,17 @@ Limitations:
 * PUT for creation is not documented. POST should be sufficient in all cases.
 * Only collection and item method resources are considered.
 * The resolution of class names only works if no wild card imports are used.
-* Custom finder using pagination are not supported.
+* Custom finders using pagination are not supported.
 * If own intermediate repository interfaces (e.g. for setting some defaults) are used with generics, the domain 
 class must be the first type parameter.  
+* The method `T update(T entity)` is a reserved name in custom repositories.
 
 # Usage
 
 Spring Data REST does not use JAX-RS annotations but scans the offered repository interface methods using a naming convention for the method semantics.
 This semantics are also used by this library. 
 
-* Apply the usual `@RepositoryRestResource` and `@Resource` annotations to the repository interfaces optionally with `exported` 
+* Apply the Spring REST `@RepositoryRestResource` and `@Resource` annotations to the repository interfaces optionally with `exported` 
 and `path` set.
 * Override the implementations in the concrete implementation and add Javadoc comments for the method
   * The `Operation` summary is using the first part of the comment.
@@ -30,13 +31,8 @@ and `path` set.
 * Mark overridden method from the `CrudRepository`, `PagingAndSortingRepository` and `QuerydslPredicateExecutor` with 
   `@RestResource`, otherwise they will be removed in the next run 
 * `findById`, `findAll` and `deleteById` are using default description if not explicitly defined.
-* Because PUT for updates and POST for creations are using both the `save` method it cannot be detected which one
-to be documented. Use the same method signature as `save` method and name the methods `create` 
-and `update`. E.g.:
-```
-  <S extends User> S create(S entity);
-
-  <S extends User> S update(S entity);
+* Because PUT for updates and POST for creations are using both the `save` method and an additional marker method 
+is added for the PUT call. An `T update(T entity)` method is added to a custom repository interface, which is created if it does not exists, yet.
 ```
 
 * Pass the source path with excludes and includes to the library or the Main class
@@ -75,13 +71,13 @@ enricher.enrich();
             <argument>-excludes</argument>
             <argument>**.bak</argument>
             <argument>-includes</argument>
-            <argument>**User.java</argument>
+            <argument>**UserRepository.java</argument>
           </arguments>
         </configuration>
         <dependencies>
             <dependency>
                 <groupId>de.ohmesoftware</groupId>
-                <artifactId>javadoctoopenapischema</artifactId>
+                <artifactId>springdataresttoopenapischema</artifactId>
                 <version>0.0.1-SNAPSHOT</version>
             </dependency>
         </dependencies>

@@ -38,7 +38,7 @@ public class DeleteByIdResourceMethodHandler extends MethodByIdResourceMethodHan
                 null,
                 Collections.singletonList(
                         createApiResponse204()),
-                String.format("Deletes a %s by its id.",
+                String.format("Deletes a(n) %s by its id.",
                         getSimpleNameFromClass(
                                 getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
     }

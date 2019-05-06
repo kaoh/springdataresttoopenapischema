@@ -7,6 +7,7 @@ import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.VoidType;
+import com.github.javaparser.utils.Pair;
 
 import java.util.Collections;
 
@@ -81,22 +82,10 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration == null) {
             return;
         }
-        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
-                SAVE_METHOD, domainClassOrInterfaceType.asString());
-        // if resource is null take default empty path and it is exported
-        boolean exported = true;
-        // this has no special sub path
-        String methodPath = null;
-        if (methodResource != null) {
-            exported = checkResourceExported(methodResource);
-            String _path = getResourcePath(methodResource);
-            if (_path != null) {
-                methodPath = _path;
-            }
-        }
-        if (exported) {
-            if (methodPath != null) {
-                addPathAnnotation(classOrInterfaceDeclaration, methodPath);
+        Pair<Boolean, String> exportPathConfig  = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, domainClassOrInterfaceType, null);
+        if (exportPathConfig.a) {
+            if (exportPathConfig.b != null) {
+                addPathAnnotation(classOrInterfaceDeclaration, exportPathConfig.b);
             }
             addPOSTAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration,
@@ -104,7 +93,7 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
                     Collections.singletonList(
                             createApiResponseAnnotation201WithContent(compilationUnit,
                                     classOrInterfaceDeclaration)),
-                    String.format("Creates a %s.",
+                    String.format("Creates a(n) %s.",
                             getSimpleNameFromClass(
                                     getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
         }

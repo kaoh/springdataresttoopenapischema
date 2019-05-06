@@ -39,6 +39,7 @@ public class DomainResourceHandler extends ResourceHandler {
         resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new DeleteByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CreateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new UpdateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 
     @Override
@@ -62,7 +63,7 @@ public class DomainResourceHandler extends ResourceHandler {
                 try (FileWriter fileWriter = new FileWriter(new File(sourceFile))) {
                     fileWriter.write(compilationUnit.toString());
                 } catch (IOException e) {
-                    throw new RuntimeException(String.format("Could not write soruce file: %s", sourcePath), e);
+                    throw new RuntimeException(String.format("Could not write source file: %s", sourcePath), e);
                 }
             }
         }

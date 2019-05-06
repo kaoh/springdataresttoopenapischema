@@ -671,6 +671,22 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
+    protected Pair<Boolean, String> getResourceConfig(String methodName, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                      ClassOrInterfaceType domainClassOrInterfaceType, String defaultPath) {
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+                methodName, domainClassOrInterfaceType.asString());
+        boolean exported = true;
+        String methodPath = defaultPath;
+        if (methodResource != null) {
+            exported = checkResourceExported(methodResource);
+            String _path = getResourcePath(methodResource);
+            if (_path != null) {
+                methodPath = _path;
+            }
+        }
+        return new Pair<>(exported, methodPath);
+    }
+
     protected void removeCrudOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         if (methodDeclaration == null) {
             return;
@@ -701,11 +717,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
     }
 
-    // finders
-
-    protected String getMethodPath(MethodDeclaration methodDeclaration) {
-        return methodDeclaration.getSignature().getName();
-    }
+    // checks
 
     private boolean checkIfExtendingRepository(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
@@ -741,7 +753,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (!checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
             return false;
         }
-       return isConcreteClass(classOrInterfaceDeclaration);
+        return isConcreteClass(classOrInterfaceDeclaration);
     }
 
     /**
@@ -771,6 +783,38 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             return isConcreteClass((ClassOrInterfaceDeclaration) parent.get());
         }
         return false;
+    }
+
+    // finders
+
+    protected ClassOrInterfaceDeclaration findCustomRepositoryInterface(CompilationUnit compilationUnit,
+                                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            // visit interface to get information
+            if (getSourceFile(compilationUnit, extent).exists()) {
+                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+                        parseClassOrInterfaceType(compilationUnit, extent);
+                if (!checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                        compilationUnitClassOrInterfaceDeclarationPair.b)
+                        &&
+                        !checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b)
+                        &&
+                        !checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b)
+                ) {
+                    return compilationUnitClassOrInterfaceDeclarationPair.b;
+                } else {
+                    return findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                            compilationUnitClassOrInterfaceDeclarationPair.b);
+                }
+            }
+        }
+        return null;
+    }
+
+    protected String getMethodPath(MethodDeclaration methodDeclaration) {
+        return methodDeclaration.getSignature().getName();
     }
 
     /**

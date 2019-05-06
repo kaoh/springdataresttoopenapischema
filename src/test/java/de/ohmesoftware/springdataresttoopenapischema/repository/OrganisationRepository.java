@@ -17,7 +17,7 @@ import java.util.Optional;
  */
 @RepositoryRestResource
 @javax.ws.rs.Path("/organisations")
-public interface OrganisationRepository extends MiddleRepository<Organisation> {
+public interface OrganisationRepository extends MiddleRepository<Organisation>, MyCustomOrganisationRepository {
 
     @RestResource
     @javax.ws.rs.GET()

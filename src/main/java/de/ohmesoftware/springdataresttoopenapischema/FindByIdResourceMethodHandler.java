@@ -36,7 +36,7 @@ public class FindByIdResourceMethodHandler extends MethodByIdResourceMethodHandl
                 Collections.singletonList(
                         createApiResponseAnnotation200WithContent(compilationUnit,
                                 classOrInterfaceDeclaration)),
-                String.format("Gets a %s by its id.",
+                String.format("Gets a(n) %s by its id.",
                         getSimpleNameFromClass(
                                 getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
     }
