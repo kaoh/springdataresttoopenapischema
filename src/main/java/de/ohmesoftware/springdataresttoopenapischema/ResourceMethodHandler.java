@@ -805,8 +805,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 ) {
                     return compilationUnitClassOrInterfaceDeclarationPair.b;
                 } else {
-                    return findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                    ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
                             compilationUnitClassOrInterfaceDeclarationPair.b);
+                    if (foundInterface != null) {
+                        return foundInterface;
+                    }
                 }
             }
         }
