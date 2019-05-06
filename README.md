@@ -25,6 +25,8 @@ This semantics are also used by this library.
 __NOTE:__ The library will remove its own added methods and annotations as preparation. This should work flawlessly but keep 
 a backup if this fails in some situations. 
  
+## Source Code Preparation
+
 * Apply the Spring REST `@RepositoryRestResource` and `@Resource` annotations to the repository interfaces to set the `exported` 
 and `path` property. This will be honored by this library.
 * To get non default Javadoc comments for the methods override the implementations in the concrete implementation 
@@ -36,7 +38,10 @@ and `path` property. This will be honored by this library.
 * `findById`, `findAll`, `deleteById`, the create and the update method are using default descriptions if not explicitly defined.
 * Because PUT for updates and POST for creations are using both the `save` method an additional marker method 
 is added for the PUT call. An `T update(T entity)` method is added to a custom repository interface, which is created if it does not exists, yet.
-```
+* Custom repositories can use an arbitrary method namings. Also the returned content and HTTP method cannot be determined. All `Operation`
+and JAX-RS annotations must be manually added.
+
+## Library Execution
 
 * Pass the source path with excludes and includes to the library or the Main class
    * __NOTE:__ The `exclude` and `include` options are using a glob expression. Take note that to use a wild card over path 

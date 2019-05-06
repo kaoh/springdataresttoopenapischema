@@ -82,7 +82,8 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
         if (methodDeclaration == null) {
             return;
         }
-        Pair<Boolean, String> exportPathConfig  = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, domainClassOrInterfaceType, null);
+        Pair<Boolean, String> exportPathConfig  = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration,
+                null, domainClassOrInterfaceType);
         if (exportPathConfig.a) {
             if (exportPathConfig.b != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, exportPathConfig.b);

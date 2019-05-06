@@ -3,7 +3,6 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
@@ -66,8 +65,8 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
         for (MethodDeclaration methodDeclaration : getCustomFinderMethods(compilationUnit, classOrInterfaceDeclaration)) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_QUERY_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
-            removeJaxRsAnnotations(compilationUnit, methodDeclaration);
-            removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            removeJaxRsMethodAnnotations(methodDeclaration);
+            removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
         }
     }
 
@@ -85,7 +84,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
             classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
         }
         Pair<Boolean, String> exportPathConfig = getResourceConfig(methodDeclaration.getNameAsString(), classOrInterfaceDeclaration,
-                methodDeclaration.getParameter(0).getType(), getMethodPath(methodDeclaration));
+                getMethodPath(methodDeclaration), methodDeclaration.getParameter(0).getType());
         if (exportPathConfig.a) {
             methodDeclaration.getParameters().forEach(p ->
                     addQueryParamAnnotation(methodDeclaration, p.getNameAsString(), true, null));

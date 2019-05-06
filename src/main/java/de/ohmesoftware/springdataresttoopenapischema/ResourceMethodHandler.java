@@ -6,10 +6,16 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
-import com.github.javaparser.ast.type.*;
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.PrimitiveType;
+import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,6 +64,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String JAXRS_DELETE_CLASS = "javax.ws.rs.DELETE";
     protected static final String JAXRS_PATCH_CLASS = "javax.ws.rs.PATCH";
 
+    protected static final String JAXRS_PRODUCES_CLASS = "javax.ws.rs.Produces";
     protected static final String JAXRS_PATH_PARAM_CLASS = "javax.ws.rs.PathParam";
     protected static final String JAXRS_QUERY_PARAM_CLASS = "javax.ws.rs.QueryParam";
     protected static final String JAXRS_QUERY_PATH_PARAM_VALUE = "value";
@@ -78,7 +85,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String JSON_IGNORE_CLASS = "com.fasterxml.jackson.annotation.JsonIgnore";
 
     protected static final String QUERYDSL_PREDICATE_CLASS = "com.querydsl.core.types.Predicate";
-    protected static final String PRODUCES_CLASS = "javax.ws.rs.Produces";
     protected static final String ANNOTATION_VALUE = "value";
 
 
@@ -103,6 +109,24 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     public abstract void removeResourceAnnotations();
 
     // class
+
+    protected void saveClassOrInterfaceToFile(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        CompilationUnit compilationUnit = classOrInterfaceDeclaration.findCompilationUnit().orElseThrow(
+                () -> new RuntimeException(String.format("Could not get compilation unit for %s",
+                        classOrInterfaceDeclaration.getNameAsString()))
+        );
+        File newInterface = getSourceFile(compilationUnit,
+                getClassOrInterfaceTypeFromClassName(compilationUnit,
+                        classOrInterfaceDeclaration.getNameAsString()
+
+                ));
+        try (FileWriter fileWriter = new FileWriter(newInterface)) {
+            fileWriter.write(compilationUnit.toString());
+        } catch (IOException e) {
+            throw new RuntimeException(String.format("Could not write Java file: %s", newInterface.getAbsolutePath()), e);
+        }
+
+    }
 
     protected Name getNameFromClass(String fqClassName) {
         String[] packages = fqClassName.split("\\.");
@@ -137,7 +161,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected boolean isIterableReturnType(MethodDeclaration methodDeclaration) {
         return methodDeclaration.getType().isClassOrInterfaceType()
-        && methodDeclaration.getType().asClassOrInterfaceType().getName().asString().endsWith(getSimpleNameFromClass(Iterable.class.getName()));
+                && methodDeclaration.getType().asClassOrInterfaceType().getName().asString().endsWith(getSimpleNameFromClass(Iterable.class.getName()));
     }
 
     protected boolean isPageReturnType(MethodDeclaration methodDeclaration) {
@@ -202,9 +226,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 continue;
             }
             VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
-            if (isPrimitive(variableDeclarator.getType()) || isPrimitiveObject((ClassOrInterfaceType) variableDeclarator.getType())) {
+            if (isPrimitive(variableDeclarator.getType()) || isPrimitiveObject(variableDeclarator.getType())) {
                 params.add(variableDeclarator.getNameAsString());
-            } else if (isSingularObject((ClassOrInterfaceType) variableDeclarator.getType())) {
+            } else if (isNoCollectionObject(variableDeclarator.getType())) {
                 params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
             }
         }
@@ -361,7 +385,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected void addJaxRsProducesAnnotation(MethodDeclaration methodDeclaration, String... contentTypes) {
-        NormalAnnotationExpr jaxRsProducesAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(PRODUCES_CLASS),
+        NormalAnnotationExpr jaxRsProducesAnnotationExpr = new NormalAnnotationExpr(getNameFromClass(JAXRS_PRODUCES_CLASS),
                 new NodeList<>(Collections.singletonList(new MemberValuePair(ANNOTATION_VALUE,
                         new ArrayInitializerExpr(new NodeList(
                                 Arrays.asList(contentTypes).stream().map(c -> new StringLiteralExpr(c)).collect(Collectors.toList())
@@ -395,7 +419,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                         ))));
     }
 
-    protected MemberValuePair createContentAnnotationMemberForListType(ClassOrInterfaceType classOrInterfaceType) {
+    protected MemberValuePair createContentAnnotationMemberForListType(Type classOrInterfaceType) {
         NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
         NormalAnnotationExpr contentJsonAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
         NormalAnnotationExpr contentJsonHalAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
@@ -405,7 +429,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 ));
     }
 
-    protected MemberValuePair createContentAnnotationMemberForType(ClassOrInterfaceType classOrInterfaceType) {
+    protected MemberValuePair createContentAnnotationMemberForType(Type classOrInterfaceType) {
         NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
         NormalAnnotationExpr contentJsonAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
         NormalAnnotationExpr contentJsonHalAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
@@ -471,8 +495,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return type instanceof PrimitiveType;
     }
 
-    private boolean isPrimitiveObject(ClassOrInterfaceType classOrInterfaceType) {
-        switch (classOrInterfaceType.getName().getIdentifier()) {
+    private boolean isPrimitiveObject(Type classOrInterfaceType) {
+        if (!classOrInterfaceType.isClassOrInterfaceType()) {
+            return false;
+        }
+        switch (classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier()) {
             case "String":
             case "Long":
             case "Integer":
@@ -484,8 +511,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
-    private boolean isSingularObject(ClassOrInterfaceType classOrInterfaceType) {
-        switch (classOrInterfaceType.getName().getIdentifier()) {
+    protected boolean isNoCollectionObject(Type classOrInterfaceType) {
+        if (!classOrInterfaceType.isClassOrInterfaceType()) {
+            return true;
+        }
+        if (classOrInterfaceType.isArrayType()) {
+            return false;
+        }
+        switch (classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier()) {
             case "Map":
             case "List":
             case "Set":
@@ -495,12 +528,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return true;
     }
 
-    private String getTypeSummary(ClassOrInterfaceType classOrInterfaceType) {
-        if (isPrimitiveObject(classOrInterfaceType)) {
+    private String getTypeSummary(Type classOrInterfaceType) {
+        if (isPrimitiveObject(classOrInterfaceType)
+                || !classOrInterfaceType.isClassOrInterfaceType()) {
             return null;
         }
         Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                parseClassOrInterfaceType(compilationUnit, classOrInterfaceType);
+                parseClassOrInterfaceType(compilationUnit, classOrInterfaceType.asClassOrInterfaceType());
         Javadoc javadoc = getJavadoc(compilationUnitClassOrInterfaceDeclarationPair.b);
         if (javadoc == null) {
             return null;
@@ -527,7 +561,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 )));
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForListType(ClassOrInterfaceType classOrInterfaceType) {
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForType(Type classOrInterfaceType) {
+        return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
+                createContentAnnotationMemberForType(classOrInterfaceType));
+    }
+
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForListType(Type classOrInterfaceType) {
         return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
                 createContentAnnotationMemberForListType(classOrInterfaceType));
     }
@@ -600,12 +639,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     // JAX-RS
 
-    protected void removeJaxRsAnnotations(CompilationUnit compilationUnit, BodyDeclaration<?> bodyDeclaration) {
-        super.removeJaxRsAnnotations(compilationUnit, bodyDeclaration);
-        removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_GET_CLASS);
-        removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_POST_CLASS);
-        removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_PUT_CLASS);
-        removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_DELETE_CLASS);
+    protected void removeJaxRsMethodAnnotations(BodyDeclaration<?> bodyDeclaration) {
+        removeJaxRsPathAnnotation(bodyDeclaration);
+        removeAnnotation(bodyDeclaration, JAXRS_GET_CLASS);
+        removeAnnotation(bodyDeclaration, JAXRS_POST_CLASS);
+        removeAnnotation(bodyDeclaration, JAXRS_PUT_CLASS);
+        removeAnnotation(bodyDeclaration, JAXRS_DELETE_CLASS);
+        removeAnnotation(bodyDeclaration, JAXRS_PRODUCES_CLASS);
     }
 
     protected void addGETAnnotation(BodyDeclaration<?> bodyDeclaration) {
@@ -671,16 +711,22 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
+    protected boolean isPUTOrPATCHOrDELETE(MethodDeclaration methodDeclaration) {
+        return methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_PUT_CLASS)).isPresent()
+                || methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_PATCH_CLASS)).isPresent()
+                || methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_DELETE_CLASS)).isPresent();
+    }
+
     protected Pair<Boolean, String> getResourceConfig(String methodName, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
-                                      Type parameterClassType, String defaultPath) {
+                                                      String defaultPath,
+                                                      Type... parameterClassTypes) {
         AnnotationExpr methodResource;
-        if (parameterClassType == null) {
+        if (parameterClassTypes == null) {
             methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
                     methodName);
-        }
-        else {
+        } else {
             methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
-                    methodName, parameterClassType.asString());
+                    methodName, Arrays.stream(parameterClassTypes).map(Type::asString).toArray(String[]::new));
         }
         boolean exported = true;
         String methodPath = defaultPath;
@@ -705,8 +751,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             }
         }
         // remove Operation annotation and JAX-RS
-        removeJaxRsAnnotations(compilationUnit, methodDeclaration);
-        removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
+        removeJaxRsMethodAnnotations(methodDeclaration);
+        removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
     }
 
     protected void removeQuerydslOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
@@ -720,8 +766,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             }
         }
         // remove Operation annotation and JAX-RS
-        removeJaxRsAnnotations(compilationUnit, methodDeclaration);
-        removeAnnotation(compilationUnit, methodDeclaration, OPERATION_ANNOTATION_CLASS);
+        removeJaxRsMethodAnnotations(methodDeclaration);
+        removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
     }
 
     // checks
@@ -857,7 +903,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @param methodName                  The method name.
      * @param paramTypes                  The parameter types as FQ class name.
-     * @param repositoryMethodsOnly <code>true</code> to list only repository methods.
+     * @param repositoryMethodsOnly       <code>true</code> to list only repository methods.
      * @return the matched method or <code>null</code>.
      */
     protected MethodDeclaration findMethodByMethodNameAndParameters(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,

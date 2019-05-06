@@ -75,8 +75,7 @@ public class DomainResourceHandler extends ResourceHandler {
                 findAll(ClassOrInterfaceDeclaration.class);
         for (ClassOrInterfaceDeclaration classOrInterfaceDeclaration : classOrInterfaceDeclarations) {
             // remove all JAX-RS annotations
-            removeAnnotation(compilationUnit, classOrInterfaceDeclaration,
-                    JAXRS_PATH_CLASS);
+            removeAnnotation(classOrInterfaceDeclaration, JAXRS_PATH_CLASS);
             removeAllOperations();
             removeImport(compilationUnit, JAXRS_PATH_CLASS);
         }

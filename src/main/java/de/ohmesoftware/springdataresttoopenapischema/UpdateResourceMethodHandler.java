@@ -82,7 +82,7 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
     private void addUpdateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
         // check if save method is exported
-        Pair<Boolean, String> exportPathConfig = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, domainClassOrInterfaceType, null);
+        Pair<Boolean, String> exportPathConfig = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, null, domainClassOrInterfaceType);
         if (!exportPathConfig.a) {
             return;
         }
@@ -125,18 +125,7 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
                         getSimpleNameFromClass(
                                 getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
 
-        CompilationUnit updateCompilationUnit = customRepositoryClassOrInterfaceDeclaration.findCompilationUnit().get();
-        File newInterface = getSourceFile(updateCompilationUnit,
-                getClassOrInterfaceTypeFromClassName(updateCompilationUnit,
-                customRepositoryClassOrInterfaceDeclaration.getNameAsString()
-
-        ));
-        try (FileWriter fileWriter = new FileWriter(newInterface)) {
-            fileWriter.write(updateCompilationUnit.toString());
-        } catch (IOException e) {
-            throw new RuntimeException(String.format("Could not write custom interface file: %s", sourcePath), e);
-        }
-
+        saveClassOrInterfaceToFile(customRepositoryClassOrInterfaceDeclaration);
     }
 
 

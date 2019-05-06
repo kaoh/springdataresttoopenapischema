@@ -156,11 +156,9 @@ public abstract class ResourceHandler {
 
     // annotations
 
-    protected void removeAnnotation(CompilationUnit compilationUnit, BodyDeclaration<?> bodyDeclaration,
+    protected void removeAnnotation(BodyDeclaration<?> bodyDeclaration,
                                     String annotationClass) {
         bodyDeclaration.getAnnotationByName(getSimpleNameFromClass(annotationClass)).ifPresent(bodyDeclaration::remove);
-        compilationUnit.getImports().stream().filter(i -> !i.isAsterisk()
-                && i.getName().asString().equals(annotationClass)).forEach(Node::remove);
     }
 
     // class
@@ -250,8 +248,8 @@ public abstract class ResourceHandler {
 
     // JAX-RS
 
-    protected void removeJaxRsAnnotations(CompilationUnit compilationUnit, BodyDeclaration<?> bodyDeclaration) {
-        removeAnnotation(compilationUnit, bodyDeclaration, JAXRS_PATH_CLASS);
+    protected void removeJaxRsPathAnnotation(BodyDeclaration<?> bodyDeclaration) {
+        removeAnnotation(bodyDeclaration, JAXRS_PATH_CLASS);
     }
 
     protected void addPathAnnotation(BodyDeclaration<?> bodyDeclaration, String path) {
