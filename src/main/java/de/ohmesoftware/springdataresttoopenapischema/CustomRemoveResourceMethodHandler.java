@@ -4,6 +4,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -79,25 +80,16 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
     private void addCustomRemoveOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
         // check if this method is using a precise class
-        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
+        if (!isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             // add method to class
             classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
         }
-        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
-                classOrInterfaceDeclaration, methodDeclaration.getNameAsString());
-        boolean exported = true;
-        String methodPath = getMethodPath(methodDeclaration);
-        if (methodResource != null) {
-            exported = checkResourceExported(methodResource);
-            String _path = getResourcePath(methodResource);
-            if (_path != null) {
-                methodPath = _path;
-            }
-        }
-        if (exported) {
+        Pair<Boolean, String> exportPathConfig = getResourceConfig(methodDeclaration.getNameAsString(), classOrInterfaceDeclaration,
+                methodDeclaration.getParameter(0).getType(), getMethodPath(methodDeclaration));
+        if (exportPathConfig.a) {
             methodDeclaration.getParameters().forEach(p ->
                     addQueryParamAnnotation(methodDeclaration, p.getNameAsString(), true, null));
-            addPathAnnotation(methodDeclaration, SEARCH_PATH + methodPath);
+            addPathAnnotation(methodDeclaration, SEARCH_PATH + exportPathConfig.b);
             addDELETEAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration,
                     null,

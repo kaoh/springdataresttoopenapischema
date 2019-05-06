@@ -71,9 +71,9 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
         ClassOrInterfaceDeclaration customRepositoryClassOrInterfaceDeclaration =
                 findCustomRepositoryInterface(compilationUnit, classOrInterfaceDeclaration);
         if (customRepositoryClassOrInterfaceDeclaration != null) {
-            MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, customRepositoryClassOrInterfaceDeclaration,
-                    UPDATE_METHOD, domainClassOrInterfaceType.asString());
-            if (methodDeclaration != null) {
+            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, UPDATE_METHOD,
+                    false, domainClassOrInterfaceType.asString());
+            if (methodDeclaration != null && !checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
             }
         }
@@ -107,9 +107,13 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
             addPathAnnotation(customRepositoryClassOrInterfaceDeclaration, exportPathConfig.b);
         }
         // add missing method
-        MethodDeclaration methodDeclaration = addInterfaceMethod(customRepositoryClassOrInterfaceDeclaration,
-                UPDATE_METHOD, domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, UPDATE_METHOD_PARAM))
-                .setBody(new BlockStmt(new NodeList<>(new ReturnStmt(new NullLiteralExpr())))).setDefault(true);
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, UPDATE_METHOD,
+                false, domainClassOrInterfaceType.asString());
+        if (methodDeclaration == null) {
+            methodDeclaration = addInterfaceMethod(customRepositoryClassOrInterfaceDeclaration,
+                    UPDATE_METHOD, domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, UPDATE_METHOD_PARAM))
+                    .setBody(new BlockStmt(new NodeList<>(new ReturnStmt(new NullLiteralExpr())))).setDefault(true);
+        }
         addPUTAnnotation(methodDeclaration);
         addOperationAnnotation(methodDeclaration,
                 createRequestBodyAnnotation(compilationUnit, classOrInterfaceDeclaration),

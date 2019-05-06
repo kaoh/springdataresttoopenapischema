@@ -672,9 +672,16 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected Pair<Boolean, String> getResourceConfig(String methodName, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
-                                      ClassOrInterfaceType domainClassOrInterfaceType, String defaultPath) {
-        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
-                methodName, domainClassOrInterfaceType.asString());
+                                      Type parameterClassType, String defaultPath) {
+        AnnotationExpr methodResource;
+        if (parameterClassType == null) {
+            methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+                    methodName);
+        }
+        else {
+            methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+                    methodName, parameterClassType.asString());
+        }
         boolean exported = true;
         String methodPath = defaultPath;
         if (methodResource != null) {
@@ -821,7 +828,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     /**
-     * Method to search methods matching a name and the passed parameter types, which should be passed as FQ class name.
+     * Method to search repository methods matching a name and the passed parameter types, which should be passed as FQ class name.
      * <p>
      * The default {@link ClassOrInterfaceDeclaration#getMethodsBySignature(String, String...)} is not checking
      * if a FQ class name or simple class name is passed.
@@ -835,7 +842,28 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
      */
     protected MethodDeclaration findMethodByMethodNameAndParameters(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                     String methodName, String... paramTypes) {
-        if (!checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
+        return findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, methodName, true,
+                paramTypes);
+    }
+
+    /**
+     * Method to search methods matching a name and the passed parameter types, which should be passed as FQ class name.
+     * <p>
+     * The default {@link ClassOrInterfaceDeclaration#getMethodsBySignature(String, String...)} is not checking
+     * if a FQ class name or simple class name is passed.
+     * </p>
+     *
+     * @param compilationUnit             The compilation unit.
+     * @param classOrInterfaceDeclaration The class or interface declaration.
+     * @param methodName                  The method name.
+     * @param paramTypes                  The parameter types as FQ class name.
+     * @param repositoryMethodsOnly <code>true</code> to list only repository methods.
+     * @return the matched method or <code>null</code>.
+     */
+    protected MethodDeclaration findMethodByMethodNameAndParameters(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+                                                                    String methodName, boolean repositoryMethodsOnly,
+                                                                    String... paramTypes) {
+        if (repositoryMethodsOnly && !checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
             return null;
         }
         List<MethodDeclaration> methodDeclarations = classOrInterfaceDeclaration.getMethodsByName(methodName);

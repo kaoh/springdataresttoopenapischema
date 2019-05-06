@@ -35,7 +35,7 @@ public interface UserRepository extends PagingAndSortingRepository<User, String>
      * @param username The username.
      */
     @RestResource(path = "deleteUser")
-    @javax.ws.rs.Path("/search/removeByUsername")
+    @javax.ws.rs.Path("/search/deleteUser")
     @javax.ws.rs.DELETE()
     @io.swagger.v3.oas.annotations.Operation(summary = "Deletes the user.", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "No Content.") })
     void removeByUsername(@javax.ws.rs.QueryParam(value = "username") @io.swagger.v3.oas.annotations.Parameter(required = true, description = "The username.") String username);

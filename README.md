@@ -13,7 +13,7 @@ Limitations:
 * Only collection and item method resources are considered.
 * The resolution of class names only works if no wild card imports are used.
 * Custom finders using pagination are not supported.
-* If own intermediate repository interfaces (e.g. for setting some defaults) are used with generics, the domain 
+* If own intermediate repository interfaces (e.g. for adding some default annotations) are used with generics, the domain 
 class must be the first type parameter.  
 * The method `T update(T entity)` is a reserved name in custom repositories.
 
@@ -22,16 +22,19 @@ class must be the first type parameter.
 Spring Data REST does not use JAX-RS annotations but scans the offered repository interface methods using a naming convention for the method semantics.
 This semantics are also used by this library. 
 
-* Apply the Spring REST `@RepositoryRestResource` and `@Resource` annotations to the repository interfaces optionally with `exported` 
-and `path` set.
-* Override the implementations in the concrete implementation and add Javadoc comments for the method
+__NOTE:__ The library will remove its own added methods and annotations as preparation. This should work flawlessly but keep 
+a backup if this fails in some situations. 
+ 
+* Apply the Spring REST `@RepositoryRestResource` and `@Resource` annotations to the repository interfaces to set the `exported` 
+and `path` property. This will be honored by this library.
+* To get non default Javadoc comments for the methods override the implementations in the concrete implementation 
   * The `Operation` summary is using the first part of the comment.
   * The `Operation` description is using any text after a paragraph `<p>`
   * `@param` tags are used for the `@Parameter` description.
-* Mark overridden method from the `CrudRepository`, `PagingAndSortingRepository` and `QuerydslPredicateExecutor` with 
+* Mark overridden methods from the `CrudRepository`, `PagingAndSortingRepository` and `QuerydslPredicateExecutor` with 
   `@RestResource`, otherwise they will be removed in the next run 
-* `findById`, `findAll` and `deleteById` are using default description if not explicitly defined.
-* Because PUT for updates and POST for creations are using both the `save` method and an additional marker method 
+* `findById`, `findAll`, `deleteById`, the create and the update method are using default descriptions if not explicitly defined.
+* Because PUT for updates and POST for creations are using both the `save` method an additional marker method 
 is added for the PUT call. An `T update(T entity)` method is added to a custom repository interface, which is created if it does not exists, yet.
 ```
 
