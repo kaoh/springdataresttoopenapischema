@@ -139,7 +139,7 @@ public abstract class ResourceHandler {
             case "Optional":
                 return Optional.class.getPackage().getName() + DOT + className;
         }
-        return compilationUnit.getImports().stream().filter(i -> !i.isAsterisk() && i.getName().getIdentifier().endsWith(className)).
+        return compilationUnit.getImports().stream().filter(i -> !i.isAsterisk() && i.getName().getIdentifier().equals(className)).
                 map(i -> i.getName().asString()).findFirst().orElse(
                         compilationUnit.getPackageDeclaration().map(p -> p.getName().asString() + DOT + className).
                                 orElseThrow(
@@ -182,6 +182,104 @@ public abstract class ResourceHandler {
             prevClassOrInterfaceType = classOrInterfaceType;
         }
         return prevClassOrInterfaceType;
+    }
+
+    protected boolean checkIfExtendingCrudInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            switch (extent.getName().getIdentifier()) {
+                case PAGING_AND_SORTING_REPOSITORY:
+                case CRUD_REPOSITORY:
+                    return true;
+                default:
+                    // visit interface to get information
+                    if (getSourceFile(compilationUnit, extent).exists()) {
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (extending) {
+                            return extending;
+                        }
+                    }
+            }
+        }
+        return false;
+    }
+
+    protected boolean checkIfExtendingQuerydslInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            switch (extent.getName().getIdentifier()) {
+                case QUERYDSL_PREDICATE_EXECUTOR:
+                    return true;
+                default:
+                    // visit interface to get information
+                    if (getSourceFile(compilationUnit, extent).exists()) {
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        boolean extending = checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (extending) {
+                            return extending;
+                        }
+                    }
+            }
+        }
+        return false;
+    }
+
+    protected boolean checkIfExtendingRepository(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+            return true;
+        }
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            switch (extent.getName().getIdentifier()) {
+                case REPOSITORY:
+                    return true;
+                default:
+                    // visit interface to get information
+                    if (getSourceFile(compilationUnit, extent).exists()) {
+                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        boolean extending = checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
+                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                        if (extending) {
+                            return extending;
+                        }
+                    }
+            }
+        }
+        return false;
+    }
+
+    protected boolean isCustomInterface(CompilationUnit compilationUnit,
+                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        return !checkIfExtendingCrudInterface(compilationUnit,
+                classOrInterfaceDeclaration)
+                &&
+                !checkIfExtendingQuerydslInterface(compilationUnit,
+                        classOrInterfaceDeclaration)
+                &&
+                !checkIfExtendingRepository(compilationUnit,
+                        classOrInterfaceDeclaration);
+    }
+
+    protected ClassOrInterfaceDeclaration findCustomRepositoryInterface(CompilationUnit compilationUnit,
+                                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
+            // visit interface to get information
+            if (getSourceFile(compilationUnit, extent).exists()) {
+                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+                        parseClassOrInterfaceType(compilationUnit, extent);
+                if (isCustomInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                        compilationUnitClassOrInterfaceDeclarationPair.b)) {
+                    return compilationUnitClassOrInterfaceDeclarationPair.b;
+                } else {
+                    ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+                            compilationUnitClassOrInterfaceDeclarationPair.b);
+                    if (foundInterface != null) {
+                        return foundInterface;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     // domain

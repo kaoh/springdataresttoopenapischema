@@ -111,7 +111,7 @@ public class Enricher {
                 @Override
                 public FileVisitResult visitFile(Path path,
                                                  BasicFileAttributes attrs) throws IOException {
-                    LOGGER.debug(String.format("Checking file '%s' for inclusion / exclusion", path.getFileName().toString()));
+                    LOGGER.debug(String.format("Checking file '%s' for inclusion / exclusion", path.toAbsolutePath().toString()));
                     if (includes != null && !includes.isEmpty()) {
                         boolean handle = false;
                         for (String include : includes) {
@@ -150,7 +150,7 @@ public class Enricher {
 
                 @Override
                 public FileVisitResult visitFileFailed(Path file, IOException exc) {
-                    LOGGER.warn(String.format("Could not check file '%s'", file.getFileName().toString()));
+                    LOGGER.warn(String.format("Could not check file '%s'", file.toFile().getAbsolutePath()), exc);
                     return FileVisitResult.CONTINUE;
                 }
             });

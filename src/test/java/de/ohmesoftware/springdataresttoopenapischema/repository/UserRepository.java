@@ -15,7 +15,7 @@ import java.util.Optional;
  */
 @RepositoryRestResource(path = "people")
 @javax.ws.rs.Path("/people")
-public interface UserRepository extends PagingAndSortingRepository<User, String>, QuerydslPredicateExecutor<User> {
+public interface UserRepository extends PagingAndSortingRepository<User, String>, QuerydslPredicateExecutor<User>, CustomUserRepository {
 
     /**
      * Find by username.
@@ -39,10 +39,6 @@ public interface UserRepository extends PagingAndSortingRepository<User, String>
     @javax.ws.rs.DELETE()
     @io.swagger.v3.oas.annotations.Operation(summary = "Deletes the user.", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "204", description = "No Content.") })
     void removeByUsername(@javax.ws.rs.QueryParam(value = "username") @io.swagger.v3.oas.annotations.Parameter(required = true, description = "The username.") String username);
-
-    <S extends User> S create(S entity);
-
-    <S extends User> S update(S entity);
 
     @javax.ws.rs.Path("/{id}")
     @javax.ws.rs.GET()

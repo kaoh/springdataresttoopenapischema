@@ -670,53 +670,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     // CRUD
 
-    protected boolean checkIfExtendingCrudInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            switch (extent.getName().getIdentifier()) {
-                case PAGING_AND_SORTING_REPOSITORY:
-                case CRUD_REPOSITORY:
-                    return true;
-                default:
-                    // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
-                        if (extending) {
-                            return extending;
-                        }
-                    }
-            }
-        }
-        return false;
-    }
-
-    protected boolean checkIfExtendingQuerydslInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            switch (extent.getName().getIdentifier()) {
-                case QUERYDSL_PREDICATE_EXECUTOR:
-                    return true;
-                default:
-                    // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
-                        if (extending) {
-                            return extending;
-                        }
-                    }
-            }
-        }
-        return false;
-    }
-
-    protected boolean isPUTOrPATCHOrDELETE(MethodDeclaration methodDeclaration) {
-        return methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_PUT_CLASS)).isPresent()
-                || methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_PATCH_CLASS)).isPresent()
-                || methodDeclaration.getAnnotationByName(getSimpleNameFromClass(JAXRS_DELETE_CLASS)).isPresent();
-    }
-
     protected Pair<Boolean, String> getResourceConfig(String methodName, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                       String defaultPath,
                                                       Type... parameterClassTypes) {
@@ -772,29 +725,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     // checks
 
-    private boolean checkIfExtendingRepository(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
-            return true;
-        }
-        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            switch (extent.getName().getIdentifier()) {
-                case REPOSITORY:
-                    return true;
-                default:
-                    // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
-                        if (extending) {
-                            return extending;
-                        }
-                    }
-            }
-        }
-        return false;
-    }
-
     /**
      * Checks if this class has a concrete type.
      *
@@ -839,35 +769,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     // finders
-
-    protected ClassOrInterfaceDeclaration findCustomRepositoryInterface(CompilationUnit compilationUnit,
-                                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            // visit interface to get information
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                        parseClassOrInterfaceType(compilationUnit, extent);
-                if (!checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b)
-                        &&
-                        !checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b)
-                        &&
-                        !checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b)
-                ) {
-                    return compilationUnitClassOrInterfaceDeclarationPair.b;
-                } else {
-                    ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b);
-                    if (foundInterface != null) {
-                        return foundInterface;
-                    }
-                }
-            }
-        }
-        return null;
-    }
 
     protected String getMethodPath(MethodDeclaration methodDeclaration) {
         return methodDeclaration.getSignature().getName();

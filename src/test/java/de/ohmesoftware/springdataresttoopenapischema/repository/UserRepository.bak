@@ -33,8 +33,4 @@ public interface UserRepository extends PagingAndSortingRepository<User, String>
     @RestResource(path = "deleteUser")
     void removeByUsername(String username);
 
-    <S extends User> S create(S entity);
-
-    <S extends User> S update(S entity);
-
 }

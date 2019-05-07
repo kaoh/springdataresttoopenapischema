@@ -16,6 +16,8 @@ Limitations:
 * If own intermediate repository interfaces (e.g. for adding some default annotations) are used with generics, the domain 
 class must be the first type parameter.  
 * The method `T update(T entity)` is a reserved name in custom repositories.
+* To override methods in repositories a concrete type must be used, 
+e.g to overwrite `<S extends T> S save(S entity)` `User save(User entity)`must be used.
 
 # Usage
 

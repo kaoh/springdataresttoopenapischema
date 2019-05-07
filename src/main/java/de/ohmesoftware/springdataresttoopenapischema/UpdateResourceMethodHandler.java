@@ -71,10 +71,11 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
         ClassOrInterfaceDeclaration customRepositoryClassOrInterfaceDeclaration =
                 findCustomRepositoryInterface(compilationUnit, classOrInterfaceDeclaration);
         if (customRepositoryClassOrInterfaceDeclaration != null) {
-            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, UPDATE_METHOD,
+            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, customRepositoryClassOrInterfaceDeclaration, UPDATE_METHOD,
                     false, domainClassOrInterfaceType.asString());
             if (methodDeclaration != null && !checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
+                saveClassOrInterfaceToFile(customRepositoryClassOrInterfaceDeclaration);
             }
         }
     }
@@ -102,12 +103,15 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
                     domainClassOrInterfaceType.getName().getIdentifier());
             customInterfaceCompilationUnit.addImport(domainClassOrInterfaceType.asString());
             customRepositoryClassOrInterfaceDeclaration = customInterfaceCompilationUnit.addInterface(customInterfaceClassName);
+            // add to initial search class as extension
+            classOrInterfaceDeclaration.addExtendedType(customInterfaceClassName);
         }
         if (exportPathConfig.b != null) {
             addPathAnnotation(customRepositoryClassOrInterfaceDeclaration, exportPathConfig.b);
         }
         // add missing method
-        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, UPDATE_METHOD,
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, customRepositoryClassOrInterfaceDeclaration,
+                UPDATE_METHOD,
                 false, domainClassOrInterfaceType.asString());
         if (methodDeclaration == null) {
             methodDeclaration = addInterfaceMethod(customRepositoryClassOrInterfaceDeclaration,
