@@ -218,10 +218,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 orElse(Collections.emptyList());
     }
 
-    private List<String> getSearchParametersFromClassOrInterface(CompilationUnit compilationUnit,
-                                                                 ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
+    private List<String> getSearchParametersFromClass(CompilationUnit compilationUnit,
+                                                      ClassOrInterfaceDeclaration sortingDomainClassDeclaration) {
         List<String> params = new ArrayList<>();
-        for (FieldDeclaration fieldDeclaration : sortingDomainClassOrInterfaceDeclaration.getFields()) {
+        for (FieldDeclaration fieldDeclaration : sortingDomainClassDeclaration.getFields()) {
             if (isPropertyIgnored(fieldDeclaration)) {
                 continue;
             }
@@ -232,11 +232,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
             }
         }
-        for (ClassOrInterfaceType extent : sortingDomainClassOrInterfaceDeclaration.getExtendedTypes()) {
+        for (ClassOrInterfaceType extent : sortingDomainClassDeclaration.getExtendedTypes()) {
             // visit interface to get information
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                params.addAll(getSearchParametersFromClassOrInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
+            if (sortingDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
+                    sortingDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
+                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
+                        sortingDomainClassDeclaration.findCompilationUnit().get(), extent);
+                params.addAll(getSearchParametersFromClass(compilationUnitClassOrInterfaceDeclarationPair.a,
                         compilationUnitClassOrInterfaceDeclarationPair.b));
             }
         }
@@ -245,7 +247,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected List<NormalAnnotationExpr> getPredicateParams(CompilationUnit compilationUnit, MethodDeclaration methodDeclaration,
                                                             ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration) {
-        List<String> searchParams = getSearchParametersFromClassOrInterface(compilationUnit, predicateDomainClassOrInterfaceDeclaration);
+        List<String> searchParams = getSearchParametersFromClass(compilationUnit, predicateDomainClassOrInterfaceDeclaration);
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS)))) {
             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>();
@@ -285,7 +287,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected List<NormalAnnotationExpr> addSortParams(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
-        List<String> sortParams = getSearchParametersFromClassOrInterface(compilationUnit, sortingDomainClassOrInterfaceDeclaration);
+        List<String> sortParams = getSearchParametersFromClass(compilationUnit, sortingDomainClassOrInterfaceDeclaration);
         if (sortParams.isEmpty()) {
             return Collections.emptyList();
         }
@@ -505,6 +507,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             case "Integer":
             case "Double":
             case "Float":
+            case "Date":
             case "Boolean":
                 return true;
         }

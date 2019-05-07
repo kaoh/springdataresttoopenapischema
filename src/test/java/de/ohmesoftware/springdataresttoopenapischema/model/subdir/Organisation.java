@@ -9,7 +9,7 @@ package de.ohmesoftware.springdataresttoopenapischema.model.subdir;
  * @author <a href="mailto:k_o_@users.sourceforge.net">Karsten Ohme
  * (k_o_@users.sourceforge.net)</a>
  */
-public class Organisation {
+public class Organisation extends Base {
 
     /**
      * The name.
