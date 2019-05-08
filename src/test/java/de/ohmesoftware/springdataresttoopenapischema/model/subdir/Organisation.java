@@ -16,4 +16,8 @@ public class Organisation extends Base {
      */
     public String name;
 
+    public byte[] logo;
+
+    public Foo foo;
+
 }

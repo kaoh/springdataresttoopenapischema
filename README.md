@@ -12,6 +12,7 @@ Limitations:
 * PUT for creation is not documented. POST should be sufficient in all cases.
 * Only collection and item method resources are considered.
 * Domain models must be classes. No interfaces are supported. Only fields will be inspected.
+* No inner classes and enums are supported.
 * The resolution of class names only works if no wild card imports are used.
 * Custom finders using pagination are not supported.
 * If own intermediate repository interfaces (e.g. for adding some default annotations) are used with generics, the domain 

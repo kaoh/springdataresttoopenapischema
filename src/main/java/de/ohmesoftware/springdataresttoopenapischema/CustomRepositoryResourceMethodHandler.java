@@ -9,7 +9,6 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.utils.Pair;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -106,7 +105,7 @@ public class CustomRepositoryResourceMethodHandler extends ResourceMethodHandler
                     responses = Collections.singletonList(
                             createApiResponseAnnotation200WithContentForType(m.getType()));
                 }
-                else if (m.getType().isArrayType() || !isNoCollectionObject(m.getType())) {
+                else if (isCollectionObject(m.getType())) {
                     responses = Collections.singletonList(
                             createApiResponseAnnotation200WithContentForListType(m.getType()));
                 }

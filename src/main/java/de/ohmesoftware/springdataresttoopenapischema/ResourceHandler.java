@@ -2,11 +2,12 @@ package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
-import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.Comment;
-import com.github.javaparser.ast.expr.*;
+import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
@@ -134,6 +135,7 @@ public abstract class ResourceHandler {
             case "Integer":
             case "Double":
             case "Float":
+            case "Date":
             case "Boolean":
                 return String.class.getPackage().getName() + DOT + className;
             case "Optional":
@@ -193,9 +195,9 @@ public abstract class ResourceHandler {
                 default:
                     // visit interface to get information
                     if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                         boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -213,9 +215,9 @@ public abstract class ResourceHandler {
                 default:
                     // visit interface to get information
                     if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                         boolean extending = checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -236,9 +238,9 @@ public abstract class ResourceHandler {
                 default:
                     // visit interface to get information
                     if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                         boolean extending = checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -265,14 +267,14 @@ public abstract class ResourceHandler {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             // visit interface to get information
             if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
                         parseClassOrInterfaceType(compilationUnit, extent);
                 if (isCustomInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b)) {
-                    return compilationUnitClassOrInterfaceDeclarationPair.b;
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration())) {
+                    return compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration();
                 } else {
                     ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b);
+                            compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                     if (foundInterface != null) {
                         return foundInterface;
                     }
@@ -295,9 +297,9 @@ public abstract class ResourceHandler {
                     return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(1).asString());
                 default:
                     // visit interface to get information
-                    Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                    Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                     ClassOrInterfaceType domainClassOrInterfaceType = getIDClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b);
+                            compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                     if (domainClassOrInterfaceType != null) {
                         return domainClassOrInterfaceType;
                     }
@@ -324,9 +326,9 @@ public abstract class ResourceHandler {
                     }
                     else {
                         // visit interface to get information
-                        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b);
+                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
                         if (domainClassOrInterfaceType != null) {
                             return domainClassOrInterfaceType;
                         }
@@ -373,13 +375,13 @@ public abstract class ResourceHandler {
                 orElse(null);
     }
 
-    protected Pair<CompilationUnit, ClassOrInterfaceDeclaration> parseClassOrInterfaceType(CompilationUnit compilationUnit,
+    protected Pair<CompilationUnit, TypeDeclaration> parseClassOrInterfaceType(CompilationUnit compilationUnit,
                                                                                            ClassOrInterfaceType classOrInterfaceType) {
 
         CompilationUnit newCompilationUnit = parseFile(getSourceFile(compilationUnit, classOrInterfaceType));
-        ClassOrInterfaceDeclaration newClassOrInterfaceDeclaration = newCompilationUnit.findFirst(ClassOrInterfaceDeclaration.class).
+        TypeDeclaration newClassOrInterfaceDeclaration = newCompilationUnit.findFirst(TypeDeclaration.class).
                 orElseThrow(() -> new RuntimeException(
-                        String.format("Could not parse class or interface type: %s", classOrInterfaceType.asString())));
+                        String.format("Could not parse type: %s", classOrInterfaceType.asString())));
         return new Pair<>(newCompilationUnit, newClassOrInterfaceDeclaration);
     }
 

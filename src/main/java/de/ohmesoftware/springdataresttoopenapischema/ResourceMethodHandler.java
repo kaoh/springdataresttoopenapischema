@@ -218,28 +218,31 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 orElse(Collections.emptyList());
     }
 
-    private List<String> getSearchParametersFromClass(CompilationUnit compilationUnit,
-                                                      ClassOrInterfaceDeclaration sortingDomainClassDeclaration) {
+    private List<String> getSearchParametersFromClass(ClassOrInterfaceDeclaration searchDomainClassDeclaration) {
         List<String> params = new ArrayList<>();
-        for (FieldDeclaration fieldDeclaration : sortingDomainClassDeclaration.getFields()) {
+        for (FieldDeclaration fieldDeclaration : searchDomainClassDeclaration.getFields()) {
             if (isPropertyIgnored(fieldDeclaration)) {
                 continue;
             }
             VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
             if (isPrimitive(variableDeclarator.getType()) || isPrimitiveObject(variableDeclarator.getType())) {
                 params.add(variableDeclarator.getNameAsString());
-            } else if (isNoCollectionObject(variableDeclarator.getType())) {
-                params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
+            } else if (!variableDeclarator.getType().isArrayType() && isSourceCodeAvailableForClassOrInterface(searchDomainClassDeclaration, variableDeclarator.getType())) {
+                if (isEnumProperty(searchDomainClassDeclaration, variableDeclarator.getType())) {
+                    params.add(variableDeclarator.getNameAsString());
+                } else if (!isCollectionObject(variableDeclarator.getType())) {
+                    params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
+                }
             }
         }
-        for (ClassOrInterfaceType extent : sortingDomainClassDeclaration.getExtendedTypes()) {
+        for (ClassOrInterfaceType extent : searchDomainClassDeclaration.getExtendedTypes()) {
             // visit interface to get information
-            if (sortingDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
-                    sortingDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
-                        sortingDomainClassDeclaration.findCompilationUnit().get(), extent);
-                params.addAll(getSearchParametersFromClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b));
+            if (searchDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
+                    searchDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
+                        searchDomainClassDeclaration.findCompilationUnit().get(), extent);
+                params.addAll(getSearchParametersFromClass(
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
             }
         }
         return params;
@@ -247,7 +250,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected List<NormalAnnotationExpr> getPredicateParams(CompilationUnit compilationUnit, MethodDeclaration methodDeclaration,
                                                             ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration) {
-        List<String> searchParams = getSearchParametersFromClass(compilationUnit, predicateDomainClassOrInterfaceDeclaration);
+        List<String> searchParams = getSearchParametersFromClass(predicateDomainClassOrInterfaceDeclaration);
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS)))) {
             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>();
@@ -287,7 +290,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected List<NormalAnnotationExpr> addSortParams(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
-        List<String> sortParams = getSearchParametersFromClass(compilationUnit, sortingDomainClassOrInterfaceDeclaration);
+        List<String> sortParams = getSearchParametersFromClass(sortingDomainClassOrInterfaceDeclaration);
         if (sortParams.isEmpty()) {
             return Collections.emptyList();
         }
@@ -326,18 +329,18 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected List<NormalAnnotationExpr> getPageableSortingAndPredicateParameterAnnotations(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                                             List<String> methodParameterClasses) {
         List<NormalAnnotationExpr> parameters = new ArrayList<>();
-        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
                 parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
         for (String paramClass : methodParameterClasses) {
             if (paramClass.endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))) {
                 parameters.addAll(getPageableParams(methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b));
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
             } else if (paramClass.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
                 parameters.addAll(getPredicateParams(compilationUnit, methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b));
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
             } else if (paramClass.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
                 parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b));
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
             }
         }
         return parameters;
@@ -497,6 +500,29 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return type instanceof PrimitiveType;
     }
 
+    private boolean isSourceCodeAvailableForClassOrInterface(ClassOrInterfaceDeclaration containingDomainClassDeclaration,
+                                                             Type classOrInterfaceType) {
+        if (!classOrInterfaceType.isClassOrInterfaceType()) {
+            return false;
+        }
+        if (!containingDomainClassDeclaration.findCompilationUnit().isPresent()) {
+            return false;
+        }
+        return getSourceFile(containingDomainClassDeclaration.findCompilationUnit().get(),
+                classOrInterfaceType.asClassOrInterfaceType()).exists();
+    }
+
+    private boolean isEnumProperty(ClassOrInterfaceDeclaration containingDomainClassDeclaration, Type propertyClassOrInterfaceType) {
+        if (!propertyClassOrInterfaceType.isClassOrInterfaceType()) {
+            return false;
+        }
+        CompilationUnit compilationUnit = containingDomainClassDeclaration.findCompilationUnit().orElseThrow(() ->
+                new RuntimeException(String.format("Could not find compilation unit for %s", containingDomainClassDeclaration.getNameAsString())));
+        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
+                compilationUnit, propertyClassOrInterfaceType.asClassOrInterfaceType());
+        return compilationUnitClassOrInterfaceDeclarationPair.b.isEnumDeclaration();
+    }
+
     private boolean isPrimitiveObject(Type classOrInterfaceType) {
         if (!classOrInterfaceType.isClassOrInterfaceType()) {
             return false;
@@ -514,21 +540,21 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
-    protected boolean isNoCollectionObject(Type classOrInterfaceType) {
+    protected boolean isCollectionObject(Type classOrInterfaceType) {
         if (!classOrInterfaceType.isClassOrInterfaceType()) {
-            return true;
+            return false;
         }
         if (classOrInterfaceType.isArrayType()) {
-            return false;
+            return true;
         }
         switch (classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier()) {
             case "Map":
             case "List":
             case "Set":
             case "Collection":
-                return false;
+                return true;
         }
-        return true;
+        return false;
     }
 
     private String getTypeSummary(Type classOrInterfaceType) {
@@ -536,7 +562,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 || !classOrInterfaceType.isClassOrInterfaceType()) {
             return null;
         }
-        Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
+        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
                 parseClassOrInterfaceType(compilationUnit, classOrInterfaceType.asClassOrInterfaceType());
         Javadoc javadoc = getJavadoc(compilationUnitClassOrInterfaceDeclarationPair.b);
         if (javadoc == null) {
@@ -858,9 +884,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                 methodDeclaration = findClosestMethod(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b,
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(),
                         methodName, paramTypes);
                 if (methodDeclaration != null) {
                     return methodDeclaration;
@@ -884,9 +910,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                 List<MethodDeclaration> otherMethodDeclarations = findCustomMethods(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b, customMethodPrefix, excludedMethods);
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), customMethodPrefix, excludedMethods);
                 customerFinderMethodDeclarations.addAll(otherMethodDeclarations);
             }
         }
@@ -930,9 +956,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                 AnnotationExpr annotationExpr = findClosestMethodResourceAnnotation(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b, methodName, paramTypes);
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), methodName, paramTypes);
                 if (annotationExpr != null) {
                     return annotationExpr;
                 }
@@ -954,9 +980,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, ClassOrInterfaceDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
+                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
                 Javadoc javadoc = findClosestMethodJavadoc(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b, methodName, paramTypes);
+                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), methodName, paramTypes);
                 if (javadoc != null) {
                     return javadoc;
                 }
