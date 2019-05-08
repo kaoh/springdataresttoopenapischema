@@ -439,27 +439,31 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 ));
     }
 
-    protected MemberValuePair createContentAnnotationMemberForType(Type classOrInterfaceType) {
+    protected MemberValuePair createContentAnnotationMemberForType(Type classOrInterfaceType, boolean request) {
         NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
         NormalAnnotationExpr contentJsonAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
-        NormalAnnotationExpr contentJsonHalAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
+        NodeList<Expression> nodes = new NodeList<>(Collections.singletonList(contentJsonAnnotationExpr));
+        if (!request) {
+            NormalAnnotationExpr contentJsonHalAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
+            nodes.add(contentJsonHalAnnotationExpr);
+        }
         return new MemberValuePair(REQUEST_BODY_API_RESPONSE_CONTENT,
                 new ArrayInitializerExpr(
-                        new NodeList<>(Arrays.asList(contentJsonAnnotationExpr, contentJsonHalAnnotationExpr))
-                ));
+                        nodes)
+                );
     }
 
     protected MemberValuePair createContentAnnotationMember(CompilationUnit compilationUnit,
-                                                            ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+                                                            ClassOrInterfaceDeclaration classOrInterfaceDeclaration, boolean request) {
         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-        return createContentAnnotationMemberForType(domainClassOrInterfaceType);
+        return createContentAnnotationMemberForType(domainClassOrInterfaceType, request);
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContent(CompilationUnit compilationUnit,
                                                                              ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                              int statusCode) {
         return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getDomainSummary(compilationUnit, classOrInterfaceDeclaration),
-                createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration));
+                createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration, false));
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentAnnotation(int statusCode,
@@ -477,7 +481,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentForType(int statusCode, ClassOrInterfaceType classOrInterfaceType) {
 
         return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getTypeSummary(classOrInterfaceType),
-                createContentAnnotationMemberForType(classOrInterfaceType));
+                createContentAnnotationMemberForType(classOrInterfaceType, false));
     }
 
     protected void removeMethodParameterAnnotation(MethodDeclaration methodDeclaration, String annotationClass) {
@@ -582,7 +586,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return new NormalAnnotationExpr(getNameFromClass(REQUEST_BODY_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(summary)),
-                        createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration)
+                        createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration, true)
                 )));
     }
 
@@ -591,13 +595,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return new NormalAnnotationExpr(getNameFromClass(REQUEST_BODY_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(summary)),
-                        createContentAnnotationMemberForType(classOrInterfaceType)
+                        createContentAnnotationMemberForType(classOrInterfaceType, true)
                 )));
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForType(Type classOrInterfaceType) {
         return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
-                createContentAnnotationMemberForType(classOrInterfaceType));
+                createContentAnnotationMemberForType(classOrInterfaceType, false));
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForListType(Type classOrInterfaceType) {
