@@ -17,6 +17,7 @@ import java.util.Optional;
  */
 @RepositoryRestResource
 @javax.ws.rs.Path("/organisations")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Organisation Methods")
 public interface OrganisationRepository extends MiddleRepository<Organisation>, MyCustomOrganisationRepository {
 
     @RestResource

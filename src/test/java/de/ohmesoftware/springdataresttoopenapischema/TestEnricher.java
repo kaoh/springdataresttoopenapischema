@@ -81,6 +81,7 @@ public class TestEnricher {
         Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.tags.Tag(name = \"User Methods\""));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(summary = \"Deletes the user.\""));
         assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
         assertTrue(newContent.contains("@javax.ws.rs.Path(\"/search/deleteUser\")"));

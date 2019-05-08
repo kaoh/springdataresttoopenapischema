@@ -59,6 +59,8 @@ public class DomainResourceHandler extends ResourceHandler {
                 }
                 // add JAX-RS path annotation
                 addPathAnnotation(classOrInterfaceDeclaration, resourcePath);
+                addTagAnnotation(classOrInterfaceDeclaration,
+                        String.format("%s Methods", getSimpleNameFromClass(getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
                 addAllOperations();
                 try (FileWriter fileWriter = new FileWriter(new File(sourceFile))) {
                     fileWriter.write(compilationUnit.toString());
@@ -77,6 +79,7 @@ public class DomainResourceHandler extends ResourceHandler {
             if(!isCustomInterface(compilationUnit, classOrInterfaceDeclaration)) {
                 // remove all JAX-RS annotations
                 removeAnnotation(classOrInterfaceDeclaration, JAXRS_PATH_CLASS);
+                removeAnnotation(classOrInterfaceDeclaration, TAG_CLASS);
                 removeAllOperations();
                 removeImport(compilationUnit, JAXRS_PATH_CLASS);
             }

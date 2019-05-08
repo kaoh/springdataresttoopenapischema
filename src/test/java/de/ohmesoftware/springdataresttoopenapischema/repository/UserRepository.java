@@ -15,6 +15,7 @@ import java.util.Optional;
  */
 @RepositoryRestResource(path = "people")
 @javax.ws.rs.Path("/people")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "User Methods")
 public interface UserRepository extends PagingAndSortingRepository<User, String>, QuerydslPredicateExecutor<User>, CustomUserRepository {
 
     /**

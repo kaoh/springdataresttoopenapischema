@@ -55,7 +55,7 @@ separators two asterisks have to be used.
 
 ```
 Enricher enricher = new Enricher(buildPath(User.class.getPackage().getName()),
-            Collections.singleton("**User.java"), Collections.singleton("**.bak"));
+            Collections.singleton("**UserRepository.java"), Collections.singleton("**.bak"));
 enricher.enrich();
 ```
 

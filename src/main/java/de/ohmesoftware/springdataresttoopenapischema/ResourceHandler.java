@@ -8,6 +8,7 @@ import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.comments.Comment;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NameExpr;
+import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
@@ -37,6 +38,9 @@ public abstract class ResourceHandler {
     protected static final String REPOSITORY_REST_RESOURCE_CLASS = "org.springframework.data.rest.core.annotation.RepositoryRestResource";
 
     protected static final String RESOURCE_CLASS = "org.springframework.data.rest.core.annotation.RestResource";
+
+    protected static final String TAG_CLASS = "io.swagger.v3.oas.annotations.tags.Tag";
+    protected static final String TAG_NAME = "name";
 
     private static final String QUOTATION_MARK_STRING = "\"";
 
@@ -354,6 +358,10 @@ public abstract class ResourceHandler {
 
     protected void addPathAnnotation(BodyDeclaration<?> bodyDeclaration, String path) {
         bodyDeclaration.addSingleMemberAnnotation(JAXRS_PATH_CLASS, new NameExpr(quoteString(SLASH + path)));
+    }
+
+    protected void addTagAnnotation(BodyDeclaration<?> bodyDeclaration, String name) {
+        bodyDeclaration.addAndGetAnnotation(TAG_CLASS).addPair(TAG_NAME, new StringLiteralExpr(escapeString(name)));
     }
 
     // Resource annotations
