@@ -101,7 +101,7 @@ public class TestEnricher {
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"emailAddress\", description = \"emailAddress search criteria. Syntax: emailAddress=&lt;value&gt;\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|organisation.*|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", description = \"The page number to return.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\")"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
     }
 
     @Test

@@ -210,7 +210,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                                             new MemberValuePair(PARAMETER_DESCRIPTION,
                                                                     new StringLiteralExpr(
                                                                             escapeString("The page size.")
-                                                                    ))
+                                                                    )),
+                                                            new MemberValuePair(PARAMETER_IN,
+                                                                    new FieldAccessExpr(new TypeExpr(
+                                                                            getClassOrInterfaceTypeFromClassName(compilationUnit, PARAMETER_IN_CLASS)
+                                                                    ), PARAMETER_IN_QUERY)
+                                                            )
                                                     )))));
                             return annotationExprs;
                         }
@@ -257,7 +262,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             searchParams.forEach(
                     p ->
                             annotationExprs.add(new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                    new NodeList(Arrays.asList(
+                                    new NodeList<>(Arrays.asList(
                                             new MemberValuePair(PARAMETER_NAME,
                                                     new StringLiteralExpr(p)
                                             ),
