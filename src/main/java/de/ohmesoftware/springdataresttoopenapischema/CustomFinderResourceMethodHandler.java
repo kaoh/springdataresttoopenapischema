@@ -3,11 +3,13 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.utils.Pair;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Resource method handler for custom finders.
@@ -20,6 +22,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
     private static final String CUSTOM_FIND_METHOD_PREFIX = "findBy";
     private static final String FIND_BY_ID_METHOD = "findById";
     private static final String SEARCH_PATH = "search" + SLASH;
+    private static final String COMMA = ",";
 
     /**
      * Constructor.
@@ -67,11 +70,11 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomFinderOperations(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (MethodDeclaration methodDeclaration : getCustomFinderMethods(compilationUnit, classOrInterfaceDeclaration)) {
-            addCustomFinderOperation(compilationUnit, classOrInterfaceDeclaration, methodDeclaration);
+            addCustomFinderOperation(classOrInterfaceDeclaration, methodDeclaration);
         }
     }
 
-    private void addCustomFinderOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    private void addCustomFinderOperation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
         // check if this method is belonging to a concrete class
         if (!isMethodOfConcreteRepositoryClass(methodDeclaration)) {
@@ -81,6 +84,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
         Pair<Boolean, String> exportPathConfig = getResourceConfig(methodDeclaration.getNameAsString(), classOrInterfaceDeclaration,
                 getMethodPath(methodDeclaration), methodDeclaration.getParameter(0).getType());
         if (exportPathConfig.a) {
+            String parameterSummary = methodDeclaration.getParameters().stream().map(NodeWithSimpleName::getNameAsString).collect(Collectors.joining(COMMA));
             methodDeclaration.getParameters().forEach(p ->
                     addQueryParamAnnotation(methodDeclaration, p.getNameAsString(), true, null));
             addPathAnnotation(methodDeclaration, SEARCH_PATH + exportPathConfig.b);
@@ -90,7 +94,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
                     Collections.singletonList(
                             createApiResponseAnnotation20xWithContentForType(200,
                                     unwrapOptionalClassOrInterfaceType((ClassOrInterfaceType) methodDeclaration.getType()))),
-                    null);
+                    String.format("Custom finder by %s.", parameterSummary));
         }
     }
 

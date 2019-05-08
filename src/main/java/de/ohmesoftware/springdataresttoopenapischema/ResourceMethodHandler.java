@@ -29,6 +29,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected static final String OPERATION_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.Operation";
     protected static final String OPERATION_SUMMARY = "summary";
+    protected static final String OPERATION_ID = "operationId";
     protected static final String OPERATION_DESCRIPTION = "description";
     protected static final String OPERATION_REQUEST_BODY = "requestBody";
     protected static final String OPERATION_RESPONSES = "responses";
@@ -78,6 +79,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String SORT_PARAM = "sort";
     protected static final String SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS = ".*";
     protected static final String SEARCH_ATTRIBUTE_OR = "|";
+    private static final String UNDERSCORE = "_";
 
     protected static final String JSON_PROPERTY_CLASS = "com.fasterxml.jackson.annotation.JsonProperty";
     protected static final String JSON_PROPERTY_ACCESS = "access";
@@ -636,12 +638,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 Modifier.Keyword.PUBLIC);
     }
 
-    protected void addOperationAnnotation(BodyDeclaration<?> bodyDeclaration,
+    protected void addOperationAnnotation(MethodDeclaration methodDeclaration,
                                           List<NormalAnnotationExpr> parameters,
                                           NormalAnnotationExpr requestBody,
                                           List<NormalAnnotationExpr> responses,
                                           String defaultSummary) {
-        Javadoc javadoc = getJavadoc(bodyDeclaration);
+        Javadoc javadoc = getJavadoc(methodDeclaration);
         String summary = defaultSummary;
         String description = null;
         if (javadoc != null) {
@@ -650,6 +652,15 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         NormalAnnotationExpr annotationExpr = new NormalAnnotationExpr(getNameFromClass(OPERATION_ANNOTATION_CLASS),
                 new NodeList<>());
+        methodDeclaration.getParentNode().ifPresent(
+                t -> t.findAll(ClassOrInterfaceDeclaration.class).stream().findFirst().
+                        ifPresent(
+                                c -> {
+                                    annotationExpr.addPair(OPERATION_ID, new StringLiteralExpr(
+                                            c.getName().getIdentifier() + UNDERSCORE + methodDeclaration.getNameAsString()));
+                                }
+                        )
+        );
         if (summary != null) {
             annotationExpr.addPair(OPERATION_SUMMARY, new StringLiteralExpr(escapeString(summary)));
         }
@@ -665,14 +676,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (responses != null && !responses.isEmpty()) {
             annotationExpr.addPair(OPERATION_RESPONSES, new ArrayInitializerExpr(new NodeList(responses)));
         }
-        bodyDeclaration.addAnnotation(annotationExpr);
+        methodDeclaration.addAnnotation(annotationExpr);
     }
 
-    protected void addOperationAnnotation(BodyDeclaration<?> bodyDeclaration,
+    protected void addOperationAnnotation(MethodDeclaration methodDeclaration,
                                           NormalAnnotationExpr requestBody,
                                           List<NormalAnnotationExpr> responses,
                                           String defaultSummary) {
-        addOperationAnnotation(bodyDeclaration, null, requestBody, responses, defaultSummary);
+        addOperationAnnotation(methodDeclaration, null, requestBody, responses, defaultSummary);
     }
 
     // JAX-RS

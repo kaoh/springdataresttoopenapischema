@@ -3,11 +3,13 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
 import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Resource method handler for custom removers.
@@ -21,6 +23,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
     private static final String DELETE_BY_ID_METHOD = "deleteById";
     private static final String CUSTOM_REMOVE_METHOD_PREFIX = "removeBy";
     private static final String SEARCH_PATH = "search" + SLASH;
+    private static final String COMMA = ",";
 
     /**
      * Constructor.
@@ -86,13 +89,15 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
         Pair<Boolean, String> exportPathConfig = getResourceConfig(methodDeclaration.getNameAsString(), classOrInterfaceDeclaration,
                 getMethodPath(methodDeclaration), methodDeclaration.getParameter(0).getType());
         if (exportPathConfig.a) {
+            String parameterSummary = methodDeclaration.getParameters().stream().map(NodeWithSimpleName::getNameAsString).collect(Collectors.joining(COMMA));
             methodDeclaration.getParameters().forEach(p ->
                     addQueryParamAnnotation(methodDeclaration, p.getNameAsString(), true, null));
             addPathAnnotation(methodDeclaration, SEARCH_PATH + exportPathConfig.b);
             addDELETEAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration,
                     null,
-                    Collections.singletonList(createApiResponse204()), null
+                    Collections.singletonList(createApiResponse204()),
+                    String.format("Custom remover by %s.", parameterSummary)
             );
         }
     }
