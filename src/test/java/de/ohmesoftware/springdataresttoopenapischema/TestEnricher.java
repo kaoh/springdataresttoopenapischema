@@ -77,6 +77,23 @@ public class TestEnricher {
     }
 
     @Test
+    public void testFindBetweenWithList() throws Exception {
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"UserRepository_findByFirstName\", summary = \"Find by username.\", description = \"Escape \\\"Test\\\"\""));
+        assertTrue(newContent.contains("@javax.ws.rs.GET"));
+        assertTrue(newContent.contains("@javax.ws.rs.Path(\"/search/findByFirstName\")"));
+        assertFalse(newContent.contains("@io.swagger.v3.oas.annotations.Operation()"));
+        assertTrue(newContent.contains("responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", " +
+                "description = \"A user being able to log-in.\", " +
+                "content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", " +
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = User.class)), " +
+                "@io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", " +
+                "schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = User.class)) }) }"));
+    }
+
+    @Test
     public void testRemoveByUsernameEnrich() throws Exception {
         Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
@@ -110,13 +127,28 @@ public class TestEnricher {
         Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
-        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findAll\", summary = \"Finds all Organisations and returns the result as array.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name|foo|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }, responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"An organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = de.ohmesoftware.springdataresttoopenapischema.model.subdir.Organisation.class))) }) })"));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findAll\", summary = \"Finds all Organisations and returns the result as array.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name|foo|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }, responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"Array of an organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))) }) })"));
         assertTrue(newContent.contains("Iterable<Organisation> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"sort\") Sort sort)"));
         assertTrue(newContent.contains("@javax.ws.rs.GET"));
         assertTrue(newContent.contains("ArraySchema"));
-        assertFalse(newContent.contains("name = \"page\""));
-        assertFalse(newContent.contains("name = \"size\""));
-        assertTrue(newContent.contains("parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name|foo|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }"));
+    }
+
+    @Test
+    public void testCustomFinderListReturned() throws Exception {
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findByCreationDateBetween\", summary = \"Custom finder by CreationDateBetween for startDate,endDate.\", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"Array of an organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))) }) })"));
+        assertTrue(newContent.contains("List<Organisation> findByCreationDateBetween(@javax.ws.rs.QueryParam(value = \"startDate\") @io.swagger.v3.oas.annotations.Parameter(required = true) Date startDate, @javax.ws.rs.QueryParam(value = \"endDate\") @io.swagger.v3.oas.annotations.Parameter(required = true) Date endDate);"));
+    }
+
+    @Test
+    public void testCustomFinderPageReturned() throws Exception {
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
+        assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findByNameContaining\", summary = \"Custom finder by NameContaining for name.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((name|foo|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"page\", description = \"The page number to return.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"name\", description = \"No description\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"pageable\", description = \"No description\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) })"));
+        assertTrue(newContent.contains("Page<Organisation> findByNameContaining(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"name\") String name, @io.swagger.v3.oas.annotations.Parameter(hidden = true, name = \"pageable\") Pageable pageable);"));
     }
 
     @Test

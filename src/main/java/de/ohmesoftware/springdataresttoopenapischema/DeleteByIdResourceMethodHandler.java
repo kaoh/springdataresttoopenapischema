@@ -3,9 +3,6 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import java.util.Collections;
 
@@ -40,7 +37,7 @@ public class DeleteByIdResourceMethodHandler extends MethodByIdResourceMethodHan
                         createApiResponse204()),
                 String.format("Deletes a(n) %s by its id.",
                         getSimpleNameFromClass(
-                                getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                                getDomainClass(classOrInterfaceDeclaration).asString())));
     }
 
 

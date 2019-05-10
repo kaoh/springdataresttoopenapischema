@@ -120,8 +120,7 @@ public abstract class ResourceHandler {
         return sourcePath.substring(0, sourcePath.length() - overlap);
     }
 
-    protected File getSourceFile(CompilationUnit compilationUnit,
-                                 ClassOrInterfaceType extent) {
+    protected File getSourceFile(CompilationUnit compilationUnit, ClassOrInterfaceType extent) {
         String className = getFullClassName(compilationUnit, extent);
         // get File
         String sourcePath = basePath + className.replace('.', '/') + JAVA_EXT;
@@ -154,10 +153,8 @@ public abstract class ResourceHandler {
                                 ));
     }
 
-    private String getFullClassName(CompilationUnit compilationUnit,
-                                    ClassOrInterfaceType extent) {
-        String className = extent.getNameAsString();
-        return getFullClassName(compilationUnit, className);
+    private String getFullClassName(CompilationUnit compilationUnit, ClassOrInterfaceType extent) {
+        return getFullClassName(compilationUnit, extent.getNameAsString());
     }
 
     // annotations
@@ -190,7 +187,7 @@ public abstract class ResourceHandler {
         return prevClassOrInterfaceType;
     }
 
-    protected boolean checkIfExtendingCrudInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected boolean checkIfExtendingCrudInterface(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             switch (extent.getName().getIdentifier()) {
                 case PAGING_AND_SORTING_REPOSITORY:
@@ -198,10 +195,10 @@ public abstract class ResourceHandler {
                     return true;
                 default:
                     // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingCrudInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                    if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                                classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                        boolean extending = checkIfExtendingCrudInterface(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -211,17 +208,17 @@ public abstract class ResourceHandler {
         return false;
     }
 
-    protected boolean checkIfExtendingQuerydslInterface(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected boolean checkIfExtendingQuerydslInterface(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             switch (extent.getName().getIdentifier()) {
                 case QUERYDSL_PREDICATE_EXECUTOR:
                     return true;
                 default:
                     // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingQuerydslInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                    if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                                classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                        boolean extending = checkIfExtendingQuerydslInterface(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -231,8 +228,8 @@ public abstract class ResourceHandler {
         return false;
     }
 
-    protected boolean checkIfExtendingRepository(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+    protected boolean checkIfExtendingRepository(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        if (checkIfExtendingCrudInterface(classOrInterfaceDeclaration)) {
             return true;
         }
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
@@ -241,10 +238,10 @@ public abstract class ResourceHandler {
                     return true;
                 default:
                     // visit interface to get information
-                    if (getSourceFile(compilationUnit, extent).exists()) {
-                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        boolean extending = checkIfExtendingRepository(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                    if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                                classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                        boolean extending = checkIfExtendingRepository(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                         if (extending) {
                             return extending;
                         }
@@ -254,31 +251,28 @@ public abstract class ResourceHandler {
         return false;
     }
 
-    protected boolean isCustomInterface(CompilationUnit compilationUnit,
-                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        return !checkIfExtendingCrudInterface(compilationUnit,
+    protected boolean isCustomInterface(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        return !checkIfExtendingCrudInterface(
                 classOrInterfaceDeclaration)
                 &&
-                !checkIfExtendingQuerydslInterface(compilationUnit,
+                !checkIfExtendingQuerydslInterface(
                         classOrInterfaceDeclaration)
                 &&
-                !checkIfExtendingRepository(compilationUnit,
+                !checkIfExtendingRepository(
                         classOrInterfaceDeclaration);
     }
 
-    protected ClassOrInterfaceDeclaration findCustomRepositoryInterface(CompilationUnit compilationUnit,
-                                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected ClassOrInterfaceDeclaration findCustomRepositoryInterface(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             // visit interface to get information
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                        parseClassOrInterfaceType(compilationUnit, extent);
-                if (isCustomInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration())) {
-                    return compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration();
+            if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                        classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                if (isCustomInterface(
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration())) {
+                    return extendTypeDeclaration.asClassOrInterfaceDeclaration();
                 } else {
-                    ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                    ClassOrInterfaceDeclaration foundInterface = findCustomRepositoryInterface(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                     if (foundInterface != null) {
                         return foundInterface;
                     }
@@ -290,7 +284,7 @@ public abstract class ResourceHandler {
 
     // domain
 
-    protected ClassOrInterfaceType getIDClass(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected ClassOrInterfaceType getIDClass(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             switch (extent.getName().getIdentifier()) {
                 case PAGING_AND_SORTING_REPOSITORY:
@@ -301,9 +295,9 @@ public abstract class ResourceHandler {
                     return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(1).asString());
                 default:
                     // visit interface to get information
-                    Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                    ClassOrInterfaceType domainClassOrInterfaceType = getIDClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                            compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                    TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                            classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                    ClassOrInterfaceType domainClassOrInterfaceType = getIDClass(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                     if (domainClassOrInterfaceType != null) {
                         return domainClassOrInterfaceType;
                     }
@@ -312,7 +306,7 @@ public abstract class ResourceHandler {
         return null;
     }
 
-    protected ClassOrInterfaceType getDomainClass(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected ClassOrInterfaceType getDomainClass(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
             switch (extent.getName().getIdentifier()) {
                 case PAGING_AND_SORTING_REPOSITORY:
@@ -322,17 +316,25 @@ public abstract class ResourceHandler {
                     if (!extent.getTypeArguments().isPresent()) {
                         throw new IllegalArgumentException(String.format("Repository does not specify a domain type: %s", extent.getName().getIdentifier()));
                     }
-                    return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(0).asString());
+                    if (!extent.findCompilationUnit().isPresent()) {
+                        throw new IllegalArgumentException(
+                                String.format("Could not find compilation unit for %s", extent.getNameAsString()));
+                    }
+                    return getClassOrInterfaceTypeFromClassName(extent.findCompilationUnit().get(), extent.getTypeArguments().get().get(0).asString());
                 default:
                     // domain class must be first type parameter
                     if (extent.getTypeArguments().isPresent()) {
-                        return getClassOrInterfaceTypeFromClassName(compilationUnit, extent.getTypeArguments().get().get(0).asString());
+                        if (!extent.findCompilationUnit().isPresent()) {
+                            throw new IllegalArgumentException(
+                                    String.format("Could not find compilation unit for %s", extent.getNameAsString()));
+                        }
+                        return getClassOrInterfaceTypeFromClassName(extent.findCompilationUnit().get(), extent.getTypeArguments().get().get(0).asString());
                     }
                     else {
                         // visit interface to get information
-                        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnitClassOrInterfaceDeclarationPair.a,
-                                compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration());
+                        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                                classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(extendTypeDeclaration.asClassOrInterfaceDeclaration());
                         if (domainClassOrInterfaceType != null) {
                             return domainClassOrInterfaceType;
                         }
@@ -342,12 +344,16 @@ public abstract class ResourceHandler {
         return null;
     }
 
-    protected String getDomainPath(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        return getDomainPath(getDomainClass(compilationUnit, classOrInterfaceDeclaration).getName().getIdentifier());
+    protected String getDomainPath(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        return getDomainPath(getDomainClass(classOrInterfaceDeclaration).getName().getIdentifier());
     }
 
     protected String getDomainPath(String string) {
-        return string.substring(0, 1).toLowerCase() + string.substring(1) + PLURAL_S;
+        return toLowerCase(string) + PLURAL_S;
+    }
+
+    protected String toLowerCase(String string) {
+        return string.substring(0, 1).toLowerCase() + string.substring(1);
     }
 
     // JAX-RS
@@ -383,14 +389,13 @@ public abstract class ResourceHandler {
                 orElse(null);
     }
 
-    protected Pair<CompilationUnit, TypeDeclaration> parseClassOrInterfaceType(CompilationUnit compilationUnit,
-                                                                                           ClassOrInterfaceType classOrInterfaceType) {
+    protected TypeDeclaration parseClassOrInterfaceType(CompilationUnit compilationUnit, ClassOrInterfaceType classOrInterfaceType) {
 
         CompilationUnit newCompilationUnit = parseFile(getSourceFile(compilationUnit, classOrInterfaceType));
         TypeDeclaration newClassOrInterfaceDeclaration = newCompilationUnit.findFirst(TypeDeclaration.class).
                 orElseThrow(() -> new RuntimeException(
                         String.format("Could not parse type: %s", classOrInterfaceType.asString())));
-        return new Pair<>(newCompilationUnit, newClassOrInterfaceDeclaration);
+        return newClassOrInterfaceDeclaration;
     }
 
     protected Optional<AnnotationExpr> checkResourceAnnotationPresent(BodyDeclaration<? extends BodyDeclaration> bodyDeclaration) {

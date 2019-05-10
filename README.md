@@ -9,14 +9,11 @@ The library in its current state was created for setting the Operation documenta
 
 Limitations:
 
-* PUT for creation is not documented. POST should be sufficient in all cases.
+* PUT for creation is not documented. Workaround: Use POST.
 * Only collection and item method resources are considered.
 * Domain models must be classes. No interfaces are supported. Only fields will be inspected.
-* No inner classes and enums are supported.
+* No inner classes and inner enums are supported.
 * The resolution of class names only works if no wild card imports are used.
-* Custom finders using pagination and collections as return types are not supported. Workaround:
-  * Use a custom interface and add the OpenAPI annotations manually
-  * Do not use `findBy` as method start. Otherwise the CustomFinder implementation will try to handle it and fail.
 * If own intermediate repository interfaces (e.g. for adding some default annotations) are used with generics, the domain 
 class must be the first type parameter.  
 * The method `T update(T entity)` is a reserved name in custom repositories.

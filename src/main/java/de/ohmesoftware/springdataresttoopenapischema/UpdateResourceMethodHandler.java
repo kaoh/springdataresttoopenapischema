@@ -6,16 +6,11 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.NullLiteralExpr;
-import com.github.javaparser.ast.expr.TypeExpr;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.VoidType;
 import com.github.javaparser.utils.Pair;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -51,7 +46,7 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void addResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> addUpdateOperation(compilationUnit, c)
         );
@@ -60,18 +55,18 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void removeResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> removeUpdateOperation(compilationUnit, c)
         );
     }
 
     private void removeUpdateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         ClassOrInterfaceDeclaration customRepositoryClassOrInterfaceDeclaration =
-                findCustomRepositoryInterface(compilationUnit, classOrInterfaceDeclaration);
+                findCustomRepositoryInterface(classOrInterfaceDeclaration);
         if (customRepositoryClassOrInterfaceDeclaration != null) {
-            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, customRepositoryClassOrInterfaceDeclaration, UPDATE_METHOD,
+            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration, UPDATE_METHOD,
                     false, domainClassOrInterfaceType.asString());
             if (methodDeclaration != null && !checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
@@ -81,14 +76,14 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
     }
 
     private void addUpdateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         // check if save method is exported
         Pair<Boolean, String> exportPathConfig = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, null, domainClassOrInterfaceType);
         if (!exportPathConfig.a) {
             return;
         }
         ClassOrInterfaceDeclaration customRepositoryClassOrInterfaceDeclaration =
-                findCustomRepositoryInterface(compilationUnit, classOrInterfaceDeclaration);
+                findCustomRepositoryInterface(classOrInterfaceDeclaration);
         // add missing interface
         if (customRepositoryClassOrInterfaceDeclaration == null) {
             CompilationUnit customInterfaceCompilationUnit;
@@ -110,7 +105,7 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
             addPathAnnotation(customRepositoryClassOrInterfaceDeclaration, exportPathConfig.b);
         }
         // add missing method
-        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, customRepositoryClassOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration,
                 UPDATE_METHOD,
                 false, domainClassOrInterfaceType.asString());
         if (methodDeclaration == null) {
@@ -120,14 +115,14 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
         }
         addPUTAnnotation(methodDeclaration);
         addOperationAnnotation(methodDeclaration,
-                createRequestBodyAnnotation(compilationUnit, classOrInterfaceDeclaration),
+                createRequestBodyAnnotation(classOrInterfaceDeclaration),
                 Arrays.asList(
                         createApiResponse204(),
-                        createApiResponseAnnotation200WithContent(compilationUnit,
+                        createApiResponseAnnotation200WithContent(
                                 classOrInterfaceDeclaration)),
                 String.format("Updates a(n) %s.",
                         getSimpleNameFromClass(
-                                getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                                getDomainClass(classOrInterfaceDeclaration).asString())));
 
         saveClassOrInterfaceToFile(customRepositoryClassOrInterfaceDeclaration);
     }

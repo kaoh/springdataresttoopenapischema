@@ -45,7 +45,7 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
     @Override
     public void addResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> addMethodByIdOperation(compilationUnit, c)
         );
@@ -54,14 +54,14 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
     @Override
     public void removeResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> removeMethodIdByOperation(compilationUnit, c)
         );
     }
 
     private void removeMethodIdByOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration,
                 methodByIdName, String.class.getName());
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
@@ -71,16 +71,16 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
     }
 
     private void addMethodByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, methodByIdName, String.class.getName());
+        MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration, methodByIdName, String.class.getName());
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             methodDeclaration = null;
         }
         // add missing method automatically if extending CRUD interface
         if (methodDeclaration == null) {
-            if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
-                ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-                ClassOrInterfaceType idClass = getIDClass(compilationUnit, classOrInterfaceDeclaration);
+            if (checkIfExtendingCrudInterface(classOrInterfaceDeclaration)) {
+                ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
+                ClassOrInterfaceType idClass = getIDClass(classOrInterfaceDeclaration);
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
                         methodByIdName, returnVoid ? new VoidType() : getOptionalWrapper(domainClassOrInterfaceType), new Parameter(
                                 idClass, METHOD_BY_ID_PARAM));
@@ -89,7 +89,7 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         if (methodDeclaration == null) {
             return;
         }
-        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration, methodByIdName,
+        AnnotationExpr methodResource = findClosestMethodResourceAnnotation(classOrInterfaceDeclaration, methodByIdName,
                 String.class.getName());
         // if resource is null take default empty path and it is exported
         boolean exported = true;

@@ -7,7 +7,6 @@ import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.PrimitiveType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.type.TypeParameter;
 import com.github.javaparser.javadoc.Javadoc;
@@ -89,10 +88,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String QUERYDSL_PREDICATE_CLASS = "com.querydsl.core.types.Predicate";
     protected static final String ANNOTATION_VALUE = "value";
 
-
-    // TODO: maybe this can be improved without artificial methods
-    protected static final String CREATE_METHOD_PATH = "create";
-    protected static final String UPDATE_METHOD_PATH = "update";
+    private static final String CUSTOM_METHOD_BY = "By";
 
     /**
      * Constructor.
@@ -117,7 +113,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 () -> new RuntimeException(String.format("Could not get compilation unit for %s",
                         classOrInterfaceDeclaration.getNameAsString()))
         );
-        File newInterface = getSourceFile(compilationUnit,
+        File newInterface = getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(),
                 getClassOrInterfaceTypeFromClassName(compilationUnit,
                         classOrInterfaceDeclaration.getNameAsString()
 
@@ -149,12 +145,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 fqClassName).setTypeArguments(classOrInterfaceType);
     }
 
-    protected ClassOrInterfaceType unwrapOptionalClassOrInterfaceType(ClassOrInterfaceType classOrInterfaceType) {
-        if (classOrInterfaceType.getName().getIdentifier().equals(Optional.class.getSimpleName()) &&
-                classOrInterfaceType.getTypeArguments().isPresent()) {
-            classOrInterfaceType = (ClassOrInterfaceType) classOrInterfaceType.getTypeArguments().get().get(0);
+    protected Type unwrapOptionalClassOrInterfaceType(Type type) {
+        if (type.isClassOrInterfaceType() && type.asClassOrInterfaceType().getName().getIdentifier().equals(Optional.class.getSimpleName()) &&
+                type.asClassOrInterfaceType().getTypeArguments().isPresent()) {
+            type = type.asClassOrInterfaceType().getTypeArguments().get().get(0);
         }
-        return classOrInterfaceType;
+        return type;
     }
 
     protected List<String> getMethodParameterTypes(MethodDeclaration methodDeclaration) {
@@ -178,6 +174,24 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         bodyDeclaration.addAndGetAnnotation(annotationClass);
     }
 
+    protected NormalAnnotationExpr createParameter(String parameterName, String description) {
+        return new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
+                new NodeList<>(Arrays.asList(
+                        new MemberValuePair(PARAMETER_NAME,
+                                new StringLiteralExpr(parameterName)
+                        ),
+                        new MemberValuePair(PARAMETER_DESCRIPTION,
+                                new StringLiteralExpr(
+                                        escapeString(description == null ? "No description" : description)
+                                )),
+                        new MemberValuePair(PARAMETER_IN,
+                                new FieldAccessExpr(new TypeExpr(
+                                        getClassOrInterfaceTypeFromClassName(null, PARAMETER_IN_CLASS)
+                                ), PARAMETER_IN_QUERY)
+                        )
+                )));
+    }
+
     // Operation annotations
 
     protected List<NormalAnnotationExpr> getPageableParams(MethodDeclaration methodDeclaration,
@@ -186,39 +200,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 p.getType().asString().endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))).
                 findFirst().
                 map(p -> {
-                            List<NormalAnnotationExpr> annotationExprs = new ArrayList<>(addSortParams(compilationUnit, sortingDomainClassOrInterfaceDeclaration));
+                            List<NormalAnnotationExpr> annotationExprs = new ArrayList<>(addSortParams(sortingDomainClassOrInterfaceDeclaration));
                             annotationExprs.addAll(
                                     Arrays.asList(
-                                            new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                                    new NodeList<>(Arrays.asList(
-                                                            new MemberValuePair(PARAMETER_NAME,
-                                                                    new StringLiteralExpr(PAGE_PARAMETER_NAME)
-                                                            ),
-                                                            new MemberValuePair(PARAMETER_DESCRIPTION,
-                                                                    new StringLiteralExpr(
-                                                                            escapeString("The page number to return.")
-                                                                    )),
-                                                            new MemberValuePair(PARAMETER_IN,
-                                                                    new FieldAccessExpr(new TypeExpr(
-                                                                            getClassOrInterfaceTypeFromClassName(compilationUnit, PARAMETER_IN_CLASS)
-                                                                    ), PARAMETER_IN_QUERY)
-                                                            )
-                                                    ))),
-                                            new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                                    new NodeList<>(Arrays.asList(
-                                                            new MemberValuePair(PARAMETER_NAME,
-                                                                    new StringLiteralExpr(SIZE_PARAMETER_NAME)
-                                                            ),
-                                                            new MemberValuePair(PARAMETER_DESCRIPTION,
-                                                                    new StringLiteralExpr(
-                                                                            escapeString("The page size.")
-                                                                    )),
-                                                            new MemberValuePair(PARAMETER_IN,
-                                                                    new FieldAccessExpr(new TypeExpr(
-                                                                            getClassOrInterfaceTypeFromClassName(compilationUnit, PARAMETER_IN_CLASS)
-                                                                    ), PARAMETER_IN_QUERY)
-                                                            )
-                                                    )))));
+                                            createParameter(PAGE_PARAMETER_NAME, "The page number to return."),
+                                            createParameter(SIZE_PARAMETER_NAME, "The page size.")
+                                           ));
                             return annotationExprs;
                         }
                 ).
@@ -232,10 +219,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 continue;
             }
             VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
-            if (isPrimitive(variableDeclarator.getType()) || isPrimitiveObject(variableDeclarator.getType())) {
+            if (variableDeclarator.getType().isPrimitiveType() || isPrimitiveObject(variableDeclarator.getType())) {
                 params.add(variableDeclarator.getNameAsString());
             } else if (!variableDeclarator.getType().isArrayType() && isSourceCodeAvailableForClassOrInterface(searchDomainClassDeclaration, variableDeclarator.getType())) {
-                if (isEnumProperty(searchDomainClassDeclaration, variableDeclarator.getType())) {
+                if (isEnumProperty(searchDomainClassDeclaration.findCompilationUnit().get(),
+                        variableDeclarator.getType())) {
                     params.add(variableDeclarator.getNameAsString());
                 } else if (!isCollectionObject(variableDeclarator.getType())) {
                     params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
@@ -246,16 +234,15 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             // visit interface to get information
             if (searchDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
                     searchDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
-                        searchDomainClassDeclaration.findCompilationUnit().get(), extent);
-                params.addAll(getSearchParametersFromClass(
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(searchDomainClassDeclaration.findCompilationUnit().get(),
+                        extent);
+                params.addAll(getSearchParametersFromClass(extendTypeDeclaration.asClassOrInterfaceDeclaration()));
             }
         }
         return params;
     }
 
-    protected List<NormalAnnotationExpr> getPredicateParams(CompilationUnit compilationUnit, MethodDeclaration methodDeclaration,
+    protected List<NormalAnnotationExpr> getPredicateParams(MethodDeclaration methodDeclaration,
                                                             ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration) {
         List<String> searchParams = getSearchParametersFromClass(predicateDomainClassOrInterfaceDeclaration);
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
@@ -263,65 +250,34 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>();
             searchParams.forEach(
                     p ->
-                            annotationExprs.add(new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                    new NodeList<>(Arrays.asList(
-                                            new MemberValuePair(PARAMETER_NAME,
-                                                    new StringLiteralExpr(p)
-                                            ),
-                                            new MemberValuePair(PARAMETER_DESCRIPTION,
-                                                    new StringLiteralExpr(
-                                                            escapeString(
-                                                                    String.format("%s search criteria. Syntax: %s=<value>", p, p))
-                                                    )
-                                            ),
-                                            new MemberValuePair(PARAMETER_IN,
-                                                    new FieldAccessExpr(new TypeExpr(
-                                                            getClassOrInterfaceTypeFromClassName(compilationUnit, PARAMETER_IN_CLASS)
-                                                    ), PARAMETER_IN_QUERY)
-                                            )
-                                    ))
-                            ))
+                            annotationExprs.add(
+                                    createParameter(p, String.format("%s search criteria. Syntax: %s=<value>", p, p))
+                            )
             );
             return annotationExprs;
         }
         return Collections.emptyList();
     }
 
-    protected List<NormalAnnotationExpr> getSortParams(CompilationUnit compilationUnit, MethodDeclaration methodDeclaration,
+    protected List<NormalAnnotationExpr> getSortParams(MethodDeclaration methodDeclaration,
                                                        ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
         if (methodDeclaration.getParameters().stream().filter(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(SORT_CLASS))).findAny().isPresent()) {
-            return addSortParams(compilationUnit, sortingDomainClassOrInterfaceDeclaration);
+            return addSortParams(sortingDomainClassOrInterfaceDeclaration);
         }
         return Collections.emptyList();
     }
 
-    protected List<NormalAnnotationExpr> addSortParams(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
+    protected List<NormalAnnotationExpr> addSortParams(ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
         List<String> sortParams = getSearchParametersFromClass(sortingDomainClassOrInterfaceDeclaration);
         if (sortParams.isEmpty()) {
             return Collections.emptyList();
         }
         return
                 Collections.singletonList(
-                        new NormalAnnotationExpr(getNameFromClass(PARAMETER_CLASS),
-                                new NodeList<>(Arrays.asList(
-                                        new MemberValuePair(PARAMETER_NAME,
-                                                new StringLiteralExpr(SORT_PARAM)
-                                        ),
-                                        new MemberValuePair(PARAMETER_DESCRIPTION,
-                                                new StringLiteralExpr(
-                                                        escapeString(
-                                                                String.format("The sorting criteria(s). Syntax: ((%s)=<value>,(asc|desc))*",
-                                                                        String.join(SEARCH_ATTRIBUTE_OR, sortParams))
-                                                        ))
-                                        ),
-                                        new MemberValuePair(PARAMETER_IN,
-                                                new FieldAccessExpr(new TypeExpr(
-                                                        getClassOrInterfaceTypeFromClassName(compilationUnit, PARAMETER_IN_CLASS)
-                                                ), PARAMETER_IN_QUERY)
-                                        )
-                                ))
-                        ));
+                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Syntax: ((%s)=<value>,(asc|desc))*",
+                                String.join(SEARCH_ATTRIBUTE_OR, sortParams)))
+                        );
     }
 
     protected void hidePageableSortAndPredicateMethodParameters(MethodDeclaration methodDeclaration) {
@@ -336,21 +292,28 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected List<NormalAnnotationExpr> getPageableSortingAndPredicateParameterAnnotations(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                                             List<String> methodParameterClasses) {
         List<NormalAnnotationExpr> parameters = new ArrayList<>();
-        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                parseClassOrInterfaceType(compilationUnit, getDomainClass(compilationUnit, classOrInterfaceDeclaration));
+        TypeDeclaration extendTypeDeclaration =
+                parseClassOrInterfaceType(classOrInterfaceDeclaration.findCompilationUnit().get(),
+                        getDomainClass(classOrInterfaceDeclaration));
         for (String paramClass : methodParameterClasses) {
             if (paramClass.endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))) {
                 parameters.addAll(getPageableParams(methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
             } else if (paramClass.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
-                parameters.addAll(getPredicateParams(compilationUnit, methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
+                parameters.addAll(getPredicateParams(methodDeclaration,
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
             } else if (paramClass.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
-                parameters.addAll(getSortParams(compilationUnit, methodDeclaration,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration()));
+                parameters.addAll(getSortParams(methodDeclaration,
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
             }
         }
         return parameters;
+    }
+
+    protected String createCustomNaming(MethodDeclaration methodDeclaration) {
+        String methodName = methodDeclaration.getNameAsString();
+        methodName = methodName.substring(methodName.indexOf(CUSTOM_METHOD_BY)+CUSTOM_METHOD_BY.length());
+        return methodName;
     }
 
     protected void addPathParamAnnotation(MethodDeclaration methodDeclaration, String parameterName, boolean required,
@@ -405,44 +368,62 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         methodDeclaration.addAnnotation(jaxRsProducesAnnotationExpr);
     }
 
-    protected NormalAnnotationExpr createSchemaAnnotation(String domainClass) {
+    protected NormalAnnotationExpr createSchemaAnnotation(Type domainClassOrInterfaceType) {
+        if (domainClassOrInterfaceType.isPrimitiveType()) {
+            switch (domainClassOrInterfaceType.asString()) {
+                case "int":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Integer.class.getName());
+                    break;
+                case "long":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Long.class.getName());
+                    break;
+                case "double":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Double.class.getName());
+                    break;
+                case "float":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Float.class.getName());
+                    break;
+                case "char":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Character.class.getName());
+                    break;
+                case "byte":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Byte.class.getName());
+                    break;
+                case "short":
+                    domainClassOrInterfaceType = getClassOrInterfaceTypeFromClassName(null, Short.class.getName());
+                    break;
+            }
+        }
+        if (!domainClassOrInterfaceType.isClassOrInterfaceType()) {
+            return null;
+        }
+        if (isCollectionObject(domainClassOrInterfaceType)) {
+            // use ArraySchema
+            return new NormalAnnotationExpr(getNameFromClass(ARRAY_SCHEMA_ANNOTATION_CLASS),
+                    new NodeList<>(Collections.singleton(
+                            new MemberValuePair(CONTENT_SCHEMA, createSchemaAnnotation(
+                                    getTypeOfCollection(domainClassOrInterfaceType))))
+                    ));
+        }
         return new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
                 new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_IMPLEMENTATION,
-                        new ClassExpr(new ClassOrInterfaceType(null, domainClass))))));
+                        new ClassExpr(domainClassOrInterfaceType)))));
+
     }
 
     protected NormalAnnotationExpr createContentAnnotation(NormalAnnotationExpr schemaAnnotationExpr, String mediaType) {
         return new NormalAnnotationExpr(getNameFromClass(CONTENT_ANNOTATION_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(mediaType)),
-                        new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr)
+                        schemaAnnotationExpr.getNameAsString().equals(ARRAY_SCHEMA_ANNOTATION_CLASS) ?
+                                new MemberValuePair(CONTENT_ARRAY, schemaAnnotationExpr)
+                                :
+                                new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr)
                 )));
     }
 
-    protected NormalAnnotationExpr createListContentAnnotation(NormalAnnotationExpr schemaAnnotationExpr, String mediaType) {
-        return new NormalAnnotationExpr(getNameFromClass(CONTENT_ANNOTATION_CLASS),
-                new NodeList<>(Arrays.asList(
-                        new MemberValuePair(CONTENT_MEDIATYPE, new StringLiteralExpr(mediaType)),
-                        new MemberValuePair(CONTENT_ARRAY,
-                                new NormalAnnotationExpr(getNameFromClass(ARRAY_SCHEMA_ANNOTATION_CLASS),
-                                        new NodeList<>(Collections.singleton(
-                                                new MemberValuePair(CONTENT_SCHEMA, schemaAnnotationExpr))
-                                        ))
-                        ))));
-    }
-
-    protected MemberValuePair createContentAnnotationMemberForListType(Type classOrInterfaceType) {
-        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
-        NormalAnnotationExpr contentJsonAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
-        NormalAnnotationExpr contentJsonHalAnnotationExpr = createListContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON_HAL);
-        return new MemberValuePair(REQUEST_BODY_API_RESPONSE_CONTENT,
-                new ArrayInitializerExpr(
-                        new NodeList<>(Arrays.asList(contentJsonAnnotationExpr, contentJsonHalAnnotationExpr))
-                ));
-    }
-
     protected MemberValuePair createContentAnnotationMemberForType(Type classOrInterfaceType, boolean request) {
-        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType.asString());
+        NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType);
         NormalAnnotationExpr contentJsonAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
         NodeList<Expression> nodes = new NodeList<>(Collections.singletonList(contentJsonAnnotationExpr));
         if (!request) {
@@ -452,20 +433,19 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return new MemberValuePair(REQUEST_BODY_API_RESPONSE_CONTENT,
                 new ArrayInitializerExpr(
                         nodes)
-                );
+        );
     }
 
-    protected MemberValuePair createContentAnnotationMember(CompilationUnit compilationUnit,
-                                                            ClassOrInterfaceDeclaration classOrInterfaceDeclaration, boolean request) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
+    protected MemberValuePair createContentAnnotationMember(ClassOrInterfaceDeclaration classOrInterfaceDeclaration, boolean request) {
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         return createContentAnnotationMemberForType(domainClassOrInterfaceType, request);
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContent(CompilationUnit compilationUnit,
-                                                                             ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContent(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                              int statusCode) {
-        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getDomainSummary(compilationUnit, classOrInterfaceDeclaration),
-                createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration, false));
+        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getDomainSummary(
+                classOrInterfaceDeclaration.findCompilationUnit().get(), classOrInterfaceDeclaration),
+                createContentAnnotationMember(classOrInterfaceDeclaration, false));
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentAnnotation(int statusCode,
@@ -480,9 +460,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 )));
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentForType(int statusCode, ClassOrInterfaceType classOrInterfaceType) {
-
-        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getTypeSummary(classOrInterfaceType),
+    protected NormalAnnotationExpr createApiResponseAnnotation20xWithContentForType(CompilationUnit compilationUnit,
+                                                                                    int statusCode,
+                                                                                    Type classOrInterfaceType) {
+        return createApiResponseAnnotation20xWithContentAnnotation(statusCode, getTypeSummary(compilationUnit, classOrInterfaceType),
                 createContentAnnotationMemberForType(classOrInterfaceType, false));
     }
 
@@ -490,10 +471,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         methodDeclaration.getParameters().stream().map(Parameter::getAnnotations).forEach(n -> n.removeIf(a -> a.getName().getIdentifier().equals(getSimpleNameFromClass(annotationClass))));
     }
 
-    private String getDomainSummary(CompilationUnit compilationUnit,
-                                    ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-        return getTypeSummary(domainClassOrInterfaceType);
+    private String getDomainSummary(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
+        return getTypeSummary(compilationUnit, domainClassOrInterfaceType);
     }
 
     private boolean isPropertyIgnored(FieldDeclaration fieldDeclaration) {
@@ -505,10 +485,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 anyMatch(p -> p.getName().asString().endsWith(JSON_PROPERTY_ACCESS) &&
                         p.getValue().asFieldAccessExpr().getName().asString().
                                 equals(JSON_PROPERTY_WRITE_ONLY))).isPresent();
-    }
-
-    private boolean isPrimitive(Type type) {
-        return type instanceof PrimitiveType;
     }
 
     private boolean isSourceCodeAvailableForClassOrInterface(ClassOrInterfaceDeclaration containingDomainClassDeclaration,
@@ -523,15 +499,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 classOrInterfaceType.asClassOrInterfaceType()).exists();
     }
 
-    private boolean isEnumProperty(ClassOrInterfaceDeclaration containingDomainClassDeclaration, Type propertyClassOrInterfaceType) {
+    private boolean isEnumProperty(CompilationUnit compilationUnit, Type propertyClassOrInterfaceType) {
         if (!propertyClassOrInterfaceType.isClassOrInterfaceType()) {
             return false;
         }
-        CompilationUnit compilationUnit = containingDomainClassDeclaration.findCompilationUnit().orElseThrow(() ->
-                new RuntimeException(String.format("Could not find compilation unit for %s", containingDomainClassDeclaration.getNameAsString())));
-        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(
-                compilationUnit, propertyClassOrInterfaceType.asClassOrInterfaceType());
-        return compilationUnitClassOrInterfaceDeclarationPair.b.isEnumDeclaration();
+        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(compilationUnit,
+                propertyClassOrInterfaceType.asClassOrInterfaceType());
+        return extendTypeDeclaration.isEnumDeclaration();
     }
 
     private boolean isPrimitiveObject(Type classOrInterfaceType) {
@@ -559,7 +533,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             return true;
         }
         switch (classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier()) {
-            case "Map":
+            case "Iterable":
             case "List":
             case "Set":
             case "Collection":
@@ -568,32 +542,47 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return false;
     }
 
-    private String getTypeSummary(Type classOrInterfaceType) {
-        if (isPrimitiveObject(classOrInterfaceType)
-                || !classOrInterfaceType.isClassOrInterfaceType()) {
+    private Type getTypeOfCollection(Type classOrInterfaceType) {
+        if (classOrInterfaceType.isArrayType()) {
+            return classOrInterfaceType.getElementType();
+        }
+        return classOrInterfaceType.asClassOrInterfaceType().getTypeArguments().map(
+                t -> t.get(0)).orElseThrow(() -> new RuntimeException("Collection does not define type."));
+    }
+
+    private String getTypeSummary(CompilationUnit compilationUnit, Type classOrInterfaceType) {
+        if (classOrInterfaceType.isPrimitiveType() || isPrimitiveObject(classOrInterfaceType)) {
+            return classOrInterfaceType.isClassOrInterfaceType() ?
+                    classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier() :
+                    classOrInterfaceType.asString();
+        }
+        if (!classOrInterfaceType.isClassOrInterfaceType()) {
             return null;
         }
-        Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair =
-                parseClassOrInterfaceType(compilationUnit, classOrInterfaceType.asClassOrInterfaceType());
-        Javadoc javadoc = getJavadoc(compilationUnitClassOrInterfaceDeclarationPair.b);
+        if (isCollectionObject(classOrInterfaceType)) {
+            return String.format("Array of %s", toLowerCase(getTypeSummary(compilationUnit, getTypeOfCollection(classOrInterfaceType))));
+        }
+        TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(compilationUnit,
+                classOrInterfaceType.asClassOrInterfaceType());
+        Javadoc javadoc = getJavadoc(extendTypeDeclaration);
         if (javadoc == null) {
             return null;
         }
         return getJavadocSummary(getJavadocText(javadoc));
     }
 
-    protected NormalAnnotationExpr createRequestBodyAnnotation(CompilationUnit compilationUnit,
-                                                               ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        String summary = getDomainSummary(compilationUnit, classOrInterfaceDeclaration);
+    protected NormalAnnotationExpr createRequestBodyAnnotation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        String summary = getDomainSummary(classOrInterfaceDeclaration.findCompilationUnit().get(),
+                classOrInterfaceDeclaration);
         return new NormalAnnotationExpr(getNameFromClass(REQUEST_BODY_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(summary)),
-                        createContentAnnotationMember(compilationUnit, classOrInterfaceDeclaration, true)
+                        createContentAnnotationMember(classOrInterfaceDeclaration, true)
                 )));
     }
 
-    protected NormalAnnotationExpr createRequestBodyAnnotationForType(ClassOrInterfaceType classOrInterfaceType) {
-        String summary = getTypeSummary(classOrInterfaceType);
+    protected NormalAnnotationExpr createRequestBodyAnnotationForType(CompilationUnit compilationUnit, ClassOrInterfaceType classOrInterfaceType) {
+        String summary = getTypeSummary(compilationUnit, classOrInterfaceType);
         return new NormalAnnotationExpr(getNameFromClass(REQUEST_BODY_CLASS),
                 new NodeList<>(Arrays.asList(
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(summary)),
@@ -601,24 +590,18 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 )));
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForType(Type classOrInterfaceType) {
-        return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForType(CompilationUnit compilationUnit, Type classOrInterfaceType) {
+        return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(compilationUnit, classOrInterfaceType),
                 createContentAnnotationMemberForType(classOrInterfaceType, false));
     }
 
-    protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForListType(Type classOrInterfaceType) {
-        return createApiResponseAnnotation20xWithContentAnnotation(200, getTypeSummary(classOrInterfaceType),
-                createContentAnnotationMemberForListType(classOrInterfaceType));
-    }
-
-    protected NormalAnnotationExpr createApiResponseAnnotation200WithContent(CompilationUnit compilationUnit,
-                                                                             ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        return createApiResponseAnnotation20xWithContent(compilationUnit, classOrInterfaceDeclaration, 200);
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithContent(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        return createApiResponseAnnotation20xWithContent(classOrInterfaceDeclaration, 200);
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation201WithContent(CompilationUnit compilationUnit,
                                                                              ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        return createApiResponseAnnotation20xWithContent(compilationUnit, classOrInterfaceDeclaration, 201);
+        return createApiResponseAnnotation20xWithContent(classOrInterfaceDeclaration, 201);
     }
 
     protected NormalAnnotationExpr createApiResponse204() {
@@ -724,10 +707,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                                       Type... parameterClassTypes) {
         AnnotationExpr methodResource;
         if (parameterClassTypes == null) {
-            methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+            methodResource = findClosestMethodResourceAnnotation(classOrInterfaceDeclaration,
                     methodName);
         } else {
-            methodResource = findClosestMethodResourceAnnotation(compilationUnit, classOrInterfaceDeclaration,
+            methodResource = findClosestMethodResourceAnnotation(classOrInterfaceDeclaration,
                     methodName, Arrays.stream(parameterClassTypes).map(Type::asString).toArray(String[]::new));
         }
         boolean exported = true;
@@ -746,7 +729,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (methodDeclaration == null) {
             return;
         }
-        if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+        if (checkIfExtendingCrudInterface(classOrInterfaceDeclaration)) {
             // if a resource annotation was added it is marked as user added method and will not be removed
             if (!checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
@@ -761,7 +744,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (methodDeclaration == null) {
             return;
         }
-        if (checkIfExtendingQuerydslInterface(compilationUnit, classOrInterfaceDeclaration)) {
+        if (checkIfExtendingQuerydslInterface(classOrInterfaceDeclaration)) {
             // if a resource annotation was added it is marked as user added method
             if (!checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
@@ -777,12 +760,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     /**
      * Checks if this class has a concrete type.
      *
-     * @param compilationUnit             The compilation unit.
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @return <code>true</code> if the repository is not generic.
      */
-    protected boolean isConcreteRepositoryClass(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        if (!checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
+    protected boolean isConcreteRepositoryClass(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        if (!checkIfExtendingRepository(classOrInterfaceDeclaration)) {
             return false;
         }
         return isConcreteClass(classOrInterfaceDeclaration);
@@ -830,15 +812,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
      * if a FQ class name or simple class name is passed.
      * </p>
      *
-     * @param compilationUnit             The compilation unit.
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @param methodName                  The method name.
      * @param paramTypes                  The parameter types as FQ class name.
      * @return the matched method or <code>null</code>.
      */
-    protected MethodDeclaration findMethodByMethodNameAndParameters(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected MethodDeclaration findMethodByMethodNameAndParameters(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                     String methodName, String... paramTypes) {
-        return findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration, methodName, true,
+        return findMethodByMethodNameAndParameters(classOrInterfaceDeclaration, methodName, true,
                 paramTypes);
     }
 
@@ -849,17 +830,16 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
      * if a FQ class name or simple class name is passed.
      * </p>
      *
-     * @param compilationUnit             The compilation unit.
      * @param classOrInterfaceDeclaration The class or interface declaration.
      * @param methodName                  The method name.
      * @param paramTypes                  The parameter types as FQ class name.
      * @param repositoryMethodsOnly       <code>true</code> to list only repository methods.
      * @return the matched method or <code>null</code>.
      */
-    protected MethodDeclaration findMethodByMethodNameAndParameters(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected MethodDeclaration findMethodByMethodNameAndParameters(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                     String methodName, boolean repositoryMethodsOnly,
                                                                     String... paramTypes) {
-        if (repositoryMethodsOnly && !checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
+        if (repositoryMethodsOnly && !checkIfExtendingRepository(classOrInterfaceDeclaration)) {
             return null;
         }
         List<MethodDeclaration> methodDeclarations = classOrInterfaceDeclaration.getMethodsByName(methodName);
@@ -894,19 +874,19 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return null;
     }
 
-    protected MethodDeclaration findClosestMethod(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected MethodDeclaration findClosestMethod(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                   String methodName, String... paramTypes) {
-        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(classOrInterfaceDeclaration,
                 methodName, paramTypes);
         if (methodDeclaration != null) {
             return methodDeclaration;
         }
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                methodDeclaration = findClosestMethod(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(),
+            if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                        classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                methodDeclaration = findClosestMethod(extendTypeDeclaration.asClassOrInterfaceDeclaration(),
                         methodName, paramTypes);
                 if (methodDeclaration != null) {
                     return methodDeclaration;
@@ -916,10 +896,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return null;
     }
 
-    protected List<MethodDeclaration> findCustomMethods(CompilationUnit compilationUnit,
-                                                        ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected List<MethodDeclaration> findCustomMethods(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                         String customMethodPrefix, Set<String> excludedMethods) {
-        if (!checkIfExtendingRepository(compilationUnit, classOrInterfaceDeclaration)) {
+        if (!checkIfExtendingRepository(classOrInterfaceDeclaration)) {
             return Collections.emptyList();
         }
         List<MethodDeclaration> customerFinderMethodDeclarations =
@@ -929,10 +908,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 ).collect(Collectors.toList());
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                List<MethodDeclaration> otherMethodDeclarations = findCustomMethods(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), customMethodPrefix, excludedMethods);
+            if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                        classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                List<MethodDeclaration> otherMethodDeclarations = findCustomMethods(
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration(), customMethodPrefix, excludedMethods);
                 customerFinderMethodDeclarations.addAll(otherMethodDeclarations);
             }
         }
@@ -945,10 +925,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         for (Pair<String, List<String>> methodParameterEntry : methodVariants) {
             String[] params = methodParameterEntry.b != null ?
                     methodParameterEntry.b.toArray(new String[0]) : null;
-            MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+            MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration,
                     methodParameterEntry.a, params);
             if (methodDeclaration != null) {
-                AnnotationExpr methodResource = findClosestMethodResourceAnnotation(compilationUnit,
+                AnnotationExpr methodResource = findClosestMethodResourceAnnotation(
                         classOrInterfaceDeclaration, methodParameterEntry.a, params);
                 if (methodResource != null) {
                     if (checkResourceExported(methodResource)) {
@@ -962,9 +942,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return null;
     }
 
-    protected AnnotationExpr findClosestMethodResourceAnnotation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected AnnotationExpr findClosestMethodResourceAnnotation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                  String methodName, String... paramTypes) {
-        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(classOrInterfaceDeclaration,
                 methodName, paramTypes);
         if (methodDeclaration != null) {
             // first found annotation in class / interface hierarchy
@@ -975,10 +955,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                AnnotationExpr annotationExpr = findClosestMethodResourceAnnotation(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), methodName, paramTypes);
+            if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                        classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                AnnotationExpr annotationExpr = findClosestMethodResourceAnnotation(
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration(), methodName, paramTypes);
                 if (annotationExpr != null) {
                     return annotationExpr;
                 }
@@ -987,9 +968,9 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return null;
     }
 
-    protected Javadoc findClosestMethodJavadoc(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected Javadoc findClosestMethodJavadoc(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                String methodName, String... paramTypes) {
-        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(compilationUnit, classOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(classOrInterfaceDeclaration,
                 methodName, paramTypes);
         if (methodDeclaration != null) {
             Optional<Javadoc> javadoc = methodDeclaration.getJavadoc();
@@ -999,10 +980,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         // check in implementations, too
         for (ClassOrInterfaceType extent : classOrInterfaceDeclaration.getExtendedTypes()) {
-            if (getSourceFile(compilationUnit, extent).exists()) {
-                Pair<CompilationUnit, TypeDeclaration> compilationUnitClassOrInterfaceDeclarationPair = parseClassOrInterfaceType(compilationUnit, extent);
-                Javadoc javadoc = findClosestMethodJavadoc(compilationUnitClassOrInterfaceDeclarationPair.a,
-                        compilationUnitClassOrInterfaceDeclarationPair.b.asClassOrInterfaceDeclaration(), methodName, paramTypes);
+            if (getSourceFile(classOrInterfaceDeclaration.findCompilationUnit().get(), extent).exists()) {
+                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                        classOrInterfaceDeclaration.findCompilationUnit().get(), extent);
+                Javadoc javadoc = findClosestMethodJavadoc(extendTypeDeclaration.asClassOrInterfaceDeclaration(),
+                        methodName, paramTypes);
                 if (javadoc != null) {
                     return javadoc;
                 }

@@ -3,7 +3,6 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
-import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -55,12 +54,12 @@ public class DomainResourceHandler extends ResourceHandler {
             if (restResourceOptional.isPresent() && checkResourceExported(restResourceOptional.get(), false)) {
                 String resourcePath = getResourcePath(restResourceOptional.get());
                 if (resourcePath == null) {
-                    resourcePath = getDomainPath(compilationUnit, classOrInterfaceDeclaration);
+                    resourcePath = getDomainPath(classOrInterfaceDeclaration);
                 }
                 // add JAX-RS path annotation
                 addPathAnnotation(classOrInterfaceDeclaration, resourcePath);
                 addTagAnnotation(classOrInterfaceDeclaration,
-                        String.format("%s Methods", getSimpleNameFromClass(getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                        String.format("%s Methods", getSimpleNameFromClass(getDomainClass(classOrInterfaceDeclaration).asString())));
                 addAllOperations();
                 try (FileWriter fileWriter = new FileWriter(new File(sourceFile))) {
                     fileWriter.write(compilationUnit.toString());
@@ -76,7 +75,7 @@ public class DomainResourceHandler extends ResourceHandler {
         List<ClassOrInterfaceDeclaration> classOrInterfaceDeclarations = compilationUnit.
                 findAll(ClassOrInterfaceDeclaration.class);
         for (ClassOrInterfaceDeclaration classOrInterfaceDeclaration : classOrInterfaceDeclarations) {
-            if(!isCustomInterface(compilationUnit, classOrInterfaceDeclaration)) {
+            if(!isCustomInterface(classOrInterfaceDeclaration)) {
                 // remove all JAX-RS annotations
                 removeAnnotation(classOrInterfaceDeclaration, JAXRS_PATH_CLASS);
                 removeAnnotation(classOrInterfaceDeclaration, TAG_CLASS);

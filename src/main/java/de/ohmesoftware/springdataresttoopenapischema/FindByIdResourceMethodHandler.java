@@ -34,11 +34,11 @@ public class FindByIdResourceMethodHandler extends MethodByIdResourceMethodHandl
         addOperationAnnotation(methodDeclaration,
                 null,
                 Collections.singletonList(
-                        createApiResponseAnnotation200WithContent(compilationUnit,
+                        createApiResponseAnnotation200WithContent(
                                 classOrInterfaceDeclaration)),
                 String.format("Gets a(n) %s by its id.",
                         getSimpleNameFromClass(
-                                getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                                getDomainClass(classOrInterfaceDeclaration).asString())));
     }
 
 }

@@ -40,7 +40,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void addResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> addCustomRemoveOperations(compilationUnit, c)
         );
@@ -49,7 +49,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void removeResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> removeCustomRemoveOperation(compilationUnit, c)
         );
@@ -57,9 +57,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private List<MethodDeclaration> getCustomFinderMethods(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         List<MethodDeclaration> methodDeclarations = new ArrayList<>();
-        methodDeclarations.addAll(findCustomMethods(compilationUnit, classOrInterfaceDeclaration, CUSTOM_REMOVE_METHOD_PREFIX,
+        methodDeclarations.addAll(findCustomMethods(classOrInterfaceDeclaration, CUSTOM_REMOVE_METHOD_PREFIX,
                 Collections.singleton(DELETE_BY_ID_METHOD)));
-        methodDeclarations.addAll(findCustomMethods(compilationUnit, classOrInterfaceDeclaration, CUSTOM_DELETE_METHOD_PREFIX,
+        methodDeclarations.addAll(findCustomMethods(classOrInterfaceDeclaration, CUSTOM_DELETE_METHOD_PREFIX,
                 Collections.singleton(DELETE_BY_ID_METHOD)));
         return methodDeclarations;
     }
@@ -97,7 +97,7 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
             addOperationAnnotation(methodDeclaration,
                     null,
                     Collections.singletonList(createApiResponse204()),
-                    String.format("Custom remover by %s.", parameterSummary)
+                    String.format("Custom remover by %s for %s.", createCustomNaming(methodDeclaration), parameterSummary)
             );
         }
     }

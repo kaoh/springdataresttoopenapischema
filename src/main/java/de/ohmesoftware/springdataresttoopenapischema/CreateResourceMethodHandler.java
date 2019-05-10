@@ -4,9 +4,7 @@ import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
-import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.VoidType;
 import com.github.javaparser.utils.Pair;
 
 import java.util.Collections;
@@ -38,7 +36,7 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void addResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> addCreateOperation(compilationUnit, c)
         );
@@ -47,15 +45,15 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
     @Override
     public void removeResourceAnnotations() {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
-                c -> isConcreteRepositoryClass(compilationUnit, c)
+                c -> isConcreteRepositoryClass(c)
         ).forEach(
                 c -> removeCreateOperation(compilationUnit, c)
         );
     }
 
     private void removeCreateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration,
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
+        MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration,
                 SAVE_METHOD, domainClassOrInterfaceType.asString());
         if (methodDeclaration != null) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_PATH_PARAM_CLASS);
@@ -65,8 +63,8 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
     }
 
     private void addCreateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(compilationUnit, classOrInterfaceDeclaration);
-        MethodDeclaration methodDeclaration = findClosestMethod(compilationUnit, classOrInterfaceDeclaration, SAVE_METHOD,
+        ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
+        MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration, SAVE_METHOD,
                 domainClassOrInterfaceType.asString());
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
@@ -74,7 +72,7 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
         }
         // add missing method automatically if extending CRUD interface
         if (methodDeclaration == null) {
-            if (checkIfExtendingCrudInterface(compilationUnit, classOrInterfaceDeclaration)) {
+            if (checkIfExtendingCrudInterface(classOrInterfaceDeclaration)) {
                 methodDeclaration = addInterfaceMethod(classOrInterfaceDeclaration,
                         SAVE_METHOD, domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, SAVE_METHOD_PARAM));
             }
@@ -90,13 +88,13 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
             }
             addPOSTAnnotation(methodDeclaration);
             addOperationAnnotation(methodDeclaration,
-                    createRequestBodyAnnotation(compilationUnit, classOrInterfaceDeclaration),
+                    createRequestBodyAnnotation(classOrInterfaceDeclaration),
                     Collections.singletonList(
                             createApiResponseAnnotation201WithContent(compilationUnit,
                                     classOrInterfaceDeclaration)),
                     String.format("Creates a(n) %s.",
                             getSimpleNameFromClass(
-                                    getDomainClass(compilationUnit, classOrInterfaceDeclaration).asString())));
+                                    getDomainClass(classOrInterfaceDeclaration).asString())));
         }
     }
 
