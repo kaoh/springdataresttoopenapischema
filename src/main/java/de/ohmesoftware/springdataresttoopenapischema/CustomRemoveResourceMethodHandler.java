@@ -70,6 +70,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeJaxRsMethodAnnotations(methodDeclaration);
             removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
+                saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
+            }
         }
     }
 
@@ -99,6 +102,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
                     Collections.singletonList(createApiResponse204()),
                     String.format("Custom remover by %s for %s.", createCustomNaming(methodDeclaration), parameterSummary)
             );
+            if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
+                saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
+            }
         }
     }
 

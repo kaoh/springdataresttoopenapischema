@@ -42,7 +42,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
                 c -> isConcreteRepositoryClass(c)
         ).forEach(
-                c -> addCustomFinderOperations(compilationUnit, c)
+                c -> addCustomFinderOperations(c)
         );
     }
 
@@ -51,26 +51,29 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
                 c -> isConcreteRepositoryClass(c)
         ).forEach(
-                c -> removeCustomFinderOperation(compilationUnit, c)
+                c -> removeCustomFinderOperation(c)
         );
     }
 
-    private List<MethodDeclaration> getCustomFinderMethods(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    private List<MethodDeclaration> getCustomFinderMethods(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         return findCustomMethods(classOrInterfaceDeclaration, CUSTOM_FIND_METHOD_PREFIX,
                 Collections.singleton(FIND_BY_ID_METHOD));
     }
 
-    private void removeCustomFinderOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        for (MethodDeclaration methodDeclaration : getCustomFinderMethods(compilationUnit, classOrInterfaceDeclaration)) {
+    private void removeCustomFinderOperation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (MethodDeclaration methodDeclaration : getCustomFinderMethods(classOrInterfaceDeclaration)) {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_QUERY_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeJaxRsMethodAnnotations(methodDeclaration);
             removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
+                saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
+            }
         }
     }
 
-    private void addCustomFinderOperations(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        for (MethodDeclaration methodDeclaration : getCustomFinderMethods(compilationUnit, classOrInterfaceDeclaration)) {
+    private void addCustomFinderOperations(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+        for (MethodDeclaration methodDeclaration : getCustomFinderMethods(classOrInterfaceDeclaration)) {
             addCustomFinderOperation(classOrInterfaceDeclaration, methodDeclaration);
         }
     }
@@ -132,6 +135,9 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
                     null,
                     responses,
                     String.format("Custom finder by %s for %s.", createCustomNaming(methodDeclaration), parameterSummary));
+            if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
+                saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
+            }
         }
     }
 

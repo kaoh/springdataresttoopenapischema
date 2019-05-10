@@ -898,9 +898,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected List<MethodDeclaration> findCustomMethods(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                         String customMethodPrefix, Set<String> excludedMethods) {
-        if (!checkIfExtendingRepository(classOrInterfaceDeclaration)) {
-            return Collections.emptyList();
-        }
         List<MethodDeclaration> customerFinderMethodDeclarations =
                 classOrInterfaceDeclaration.getMethods().stream().filter(
                         m -> !excludedMethods.contains(m.getSignature().getName())
