@@ -107,7 +107,9 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
                 methodDeclaration.getParameters().forEach(p ->
                         addParameterHideAnnotation(methodDeclaration, p.getNameAsString()));
 //                add to pageable/sorting parameters instead
-                methodDeclaration.getParameters().forEach(p -> {
+                methodDeclaration.getParameters().stream().filter(p ->
+                        !p.getTypeAsString().endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))
+                                && !p.getTypeAsString().endsWith(getSimpleNameFromClass(SORT_CLASS))).forEach(p -> {
                             Javadoc javadoc = getJavadoc(methodDeclaration);
                             String paramDescription = null;
                             if (javadoc != null) {
