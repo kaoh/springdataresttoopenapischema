@@ -481,7 +481,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             return true;
         }
         Optional<AnnotationExpr> jsonPropertyAnnotationExpr = fieldDeclaration.getAnnotationByName(getSimpleNameFromClass(JSON_PROPERTY_CLASS));
-        return jsonPropertyAnnotationExpr.filter(annotationExpr -> ((NormalAnnotationExpr) annotationExpr).getPairs().stream().
+        return jsonPropertyAnnotationExpr.filter(annotationExpr -> annotationExpr.isNormalAnnotationExpr() && ((NormalAnnotationExpr) annotationExpr).getPairs().stream().
                 anyMatch(p -> p.getName().asString().endsWith(JSON_PROPERTY_ACCESS) &&
                         p.getValue().asFieldAccessExpr().getName().asString().
                                 equals(JSON_PROPERTY_WRITE_ONLY))).isPresent();
