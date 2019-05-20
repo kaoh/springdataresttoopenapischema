@@ -19,7 +19,7 @@ import java.util.function.Predicate;
  * (k_o_@users.sourceforge.net)</a>
  */
 @RepositoryRestResource
-public interface FooRepository extends PagingAndSortingRepository<Foo, String>, QuerydslPredicateExecutor<Foo> {
+public interface FooRepository extends MiddleRepository<Foo> {
 
     @RestResource(exported = false)
     Optional<Foo> findById(String id);

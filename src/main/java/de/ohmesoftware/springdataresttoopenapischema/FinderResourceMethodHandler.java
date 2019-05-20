@@ -88,10 +88,6 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, null));
         MethodDeclaration methodDeclaration = findClosestMethodFromMethodVariants(classOrInterfaceDeclaration,
                 methodVariants);
-        // check if this method is using a precise class
-        if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
-            methodDeclaration = null;
-        }
         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         // add missing method automatically if extending CRUD or QuerydslPredicator interface
         if (methodDeclaration == null) {
@@ -114,7 +110,6 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             return;
         }
         List<String> params = getMethodParameterTypes(methodDeclaration);
-        hidePageableSortAndPredicateMethodParameters(methodDeclaration);
         AnnotationExpr methodResource = findClosestMethodResourceAnnotation(classOrInterfaceDeclaration,
                 FIND_ALL_METHOD, params.toArray(new String[0]));
         // if resource is null take default empty path and it is exported
@@ -129,6 +124,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             }
         }
         if (exported) {
+            hidePageableSortAndPredicateMethodParameters(methodDeclaration);
             if (methodPath != null) {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }

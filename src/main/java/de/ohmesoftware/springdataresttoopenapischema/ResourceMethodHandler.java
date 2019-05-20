@@ -918,7 +918,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected MethodDeclaration findClosestMethodFromMethodVariants(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                     List<Pair<String, List<String>>> methodVariants) {
-        MethodDeclaration bestMatch = null;
+        List<Pair<MethodDeclaration, Boolean>> exportedMap = new ArrayList<>();
         for (Pair<String, List<String>> methodParameterEntry : methodVariants) {
             String[] params = methodParameterEntry.b != null ?
                     methodParameterEntry.b.toArray(new String[0]) : new String[0];
@@ -928,19 +928,15 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 AnnotationExpr methodResource = findClosestMethodResourceAnnotation(
                         classOrInterfaceDeclaration, methodParameterEntry.a, params);
                 if (methodResource != null) {
-                    if (checkResourceExported(methodResource)) {
-                        // this is the best match, otherwise try to find export version and remember this
-                        return methodDeclaration;
-                    }
-                    else {
-                        bestMatch = methodDeclaration;
-                    }
-                } else {
+                    exportedMap.add(new Pair<>(methodDeclaration, checkResourceExported(methodResource)));
+                } else if (isMethodOfConcreteRepositoryClass(methodDeclaration)) {
                     return methodDeclaration;
                 }
             }
         }
-        return bestMatch;
+        return exportedMap.stream().filter(e -> e.b).findFirst().map(m -> m.a).orElse(
+                exportedMap.stream().filter(e -> !e.b).findFirst().map(m -> m.a).orElse(null)
+        );
     }
 
     protected AnnotationExpr findClosestMethodResourceAnnotation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,

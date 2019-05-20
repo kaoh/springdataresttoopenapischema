@@ -20,13 +20,13 @@ import java.util.function.Predicate;
 @RepositoryRestResource
 @javax.ws.rs.Path("/foos")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Foo Methods")
-public interface FooRepository extends PagingAndSortingRepository<Foo, String>, QuerydslPredicateExecutor<Foo> {
+public interface FooRepository extends MiddleRepository<Foo> {
 
     @RestResource(exported = false)
     Optional<Foo> findById(String id);
 
     @RestResource(exported = false)
-    Page<Foo> findAll(@io.swagger.v3.oas.annotations.Parameter(hidden = true, name = "predicate") Predicate predicate, @io.swagger.v3.oas.annotations.Parameter(hidden = true, name = "pageable") Pageable pageable);
+    Page<Foo> findAll(Predicate predicate, Pageable pageable);
 
     @RestResource(exported = false)
     void deleteById(String id);

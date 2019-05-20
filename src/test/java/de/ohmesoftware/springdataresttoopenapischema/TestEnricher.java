@@ -128,6 +128,7 @@ public class TestEnricher {
         assertFalse(newContent.contains("@javax.ws.rs.GET"));
         assertFalse(newContent.contains("@javax.ws.rs.POST"));
         assertFalse(newContent.contains("@javax.ws.rs.DELETE"));
+        assertFalse(newContent.contains("@io.swagger.v3.oas.annotations.Parameter"));
     }
 
     @Test
