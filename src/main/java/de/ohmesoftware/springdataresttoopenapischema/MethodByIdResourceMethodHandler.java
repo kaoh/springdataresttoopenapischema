@@ -47,7 +47,7 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).stream().filter(
                 c -> isConcreteRepositoryClass(c)
         ).forEach(
-                c -> addMethodByIdOperation(compilationUnit, c)
+                c -> addMethodByIdOperation(c)
         );
     }
 
@@ -70,7 +70,7 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
         }
     }
 
-    private void addMethodByIdOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    private void addMethodByIdOperation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration, methodByIdName, String.class.getName());
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {

@@ -11,7 +11,6 @@ import com.github.javaparser.ast.expr.NameExpr;
 import com.github.javaparser.ast.expr.StringLiteralExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.javadoc.Javadoc;
-import com.github.javaparser.utils.Pair;
 
 import java.io.File;
 import java.io.FileNotFoundException;

@@ -86,7 +86,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(PAGEABLE_CLASS)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, Collections.singletonList(SORT_CLASS)));
         methodVariants.add(new Pair<>(FIND_ALL_METHOD, null));
-        MethodDeclaration methodDeclaration = findClosestMethodFromMethodVariants(compilationUnit, classOrInterfaceDeclaration,
+        MethodDeclaration methodDeclaration = findClosestMethodFromMethodVariants(classOrInterfaceDeclaration,
                 methodVariants);
         // check if this method is using a precise class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {

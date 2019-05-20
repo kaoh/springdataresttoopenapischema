@@ -1,9 +1,6 @@
 package de.ohmesoftware.springdataresttoopenapischema;
 
-import de.ohmesoftware.springdataresttoopenapischema.repository.MiddleRepository;
-import de.ohmesoftware.springdataresttoopenapischema.repository.MyCustomOrganisationRepository;
-import de.ohmesoftware.springdataresttoopenapischema.repository.OrganisationRepository;
-import de.ohmesoftware.springdataresttoopenapischema.repository.UserRepository;
+import de.ohmesoftware.springdataresttoopenapischema.repository.*;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
@@ -28,6 +25,7 @@ public class TestEnricher {
 
     @Before
     public void before() throws Exception {
+        FileUtils.copyFile(new File(buildPath(FooRepository.class.getName()) + ".bak"), new File(buildPath(FooRepository.class.getName()) + ".java"));
         FileUtils.copyFile(new File(buildPath(UserRepository.class.getName()) + ".bak"), new File(buildPath(UserRepository.class.getName()) + ".java"));
         FileUtils.copyFile(new File(buildPath(OrganisationRepository.class.getName()) + ".bak"), new File(buildPath(OrganisationRepository.class.getName()) + ".java"));
         FileUtils.copyFile(new File(buildPath(MiddleRepository.class.getName()) + ".bak"), new File(buildPath(MiddleRepository.class.getName()) + ".java"));
@@ -120,6 +118,16 @@ public class TestEnricher {
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: ((username|emailAddress|role|firstName|lastName|blocked|failedLoginAttempts|organisation.*|id|creationDate)=&lt;value&gt;,(asc|desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"page\", description = \"The page number to return.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY)"));
+    }
+
+    @Test
+    public void testFooNoExport() throws Exception {
+        Enricher enricher = new Enricher(buildPath(FooRepository.class.getPackage().getName().substring(0, FooRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        enricher.enrich();
+        String newContent = IOUtils.toString(new FileReader(new File(buildPath(FooRepository.class.getName()) + ".java")));
+        assertFalse(newContent.contains("@javax.ws.rs.GET"));
+        assertFalse(newContent.contains("@javax.ws.rs.POST"));
+        assertFalse(newContent.contains("@javax.ws.rs.DELETE"));
     }
 
     @Test

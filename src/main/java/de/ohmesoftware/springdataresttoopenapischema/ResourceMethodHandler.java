@@ -205,7 +205,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                                     Arrays.asList(
                                             createParameter(PAGE_PARAMETER_NAME, "The page number to return."),
                                             createParameter(SIZE_PARAMETER_NAME, "The page size.")
-                                           ));
+                                    ));
                             return annotationExprs;
                         }
                 ).
@@ -277,7 +277,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 Collections.singletonList(
                         createParameter(SORT_PARAM, String.format("The sorting criteria(s). Syntax: ((%s)=<value>,(asc|desc))*",
                                 String.join(SEARCH_ATTRIBUTE_OR, sortParams)))
-                        );
+                );
     }
 
     protected void hidePageableSortAndPredicateMethodParameters(MethodDeclaration methodDeclaration) {
@@ -312,7 +312,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected String createCustomNaming(MethodDeclaration methodDeclaration) {
         String methodName = methodDeclaration.getNameAsString();
-        methodName = methodName.substring(methodName.indexOf(CUSTOM_METHOD_BY)+CUSTOM_METHOD_BY.length());
+        methodName = methodName.substring(methodName.indexOf(CUSTOM_METHOD_BY) + CUSTOM_METHOD_BY.length());
         return methodName;
     }
 
@@ -916,12 +916,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return customerFinderMethodDeclarations;
     }
 
-    protected MethodDeclaration findClosestMethodFromMethodVariants(CompilationUnit compilationUnit,
-                                                                    ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
+    protected MethodDeclaration findClosestMethodFromMethodVariants(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                                                     List<Pair<String, List<String>>> methodVariants) {
+        MethodDeclaration bestMatch = null;
         for (Pair<String, List<String>> methodParameterEntry : methodVariants) {
             String[] params = methodParameterEntry.b != null ?
-                    methodParameterEntry.b.toArray(new String[0]) : null;
+                    methodParameterEntry.b.toArray(new String[0]) : new String[0];
             MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration,
                     methodParameterEntry.a, params);
             if (methodDeclaration != null) {
@@ -929,14 +929,18 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                         classOrInterfaceDeclaration, methodParameterEntry.a, params);
                 if (methodResource != null) {
                     if (checkResourceExported(methodResource)) {
+                        // this is the best match, otherwise try to find export version and remember this
                         return methodDeclaration;
+                    }
+                    else {
+                        bestMatch = methodDeclaration;
                     }
                 } else {
                     return methodDeclaration;
                 }
             }
         }
-        return null;
+        return bestMatch;
     }
 
     protected AnnotationExpr findClosestMethodResourceAnnotation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
