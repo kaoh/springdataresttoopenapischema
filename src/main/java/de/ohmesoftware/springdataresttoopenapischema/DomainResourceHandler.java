@@ -38,7 +38,8 @@ public class DomainResourceHandler extends ResourceHandler {
         resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new DeleteByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CreateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
-        resourceMethodHandlers.add(new UpdateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new PutResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new PatchResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 
     @Override

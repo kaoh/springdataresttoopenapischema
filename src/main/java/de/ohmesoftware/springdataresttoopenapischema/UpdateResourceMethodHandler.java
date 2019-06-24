@@ -2,6 +2,7 @@ package de.ohmesoftware.springdataresttoopenapischema;
 
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.NodeList;
+import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
@@ -23,9 +24,8 @@ import java.util.Arrays;
  * @author <a href="mailto:karsten@simless.com">Karsten Ohme
  * (karsten@simless.com)</a>
  */
-public class UpdateResourceMethodHandler extends ResourceMethodHandler {
+public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler {
 
-    private static final String UPDATE_METHOD = "update";
     private static final String SAVE_METHOD = "save";
     private static final String UPDATE_METHOD_PARAM = "entity";
     private static final String CUSTOM_REPOSITORY_NAME_TEMPLATE = "Custom%sRepository";
@@ -42,6 +42,25 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
                                           CompilationUnit compilationUnit) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
     }
+
+    /**
+     * Must be implemented to add the necessary annotation like PATCH or PUT.
+     * @param bodyDeclaration The body declaration where the annotation is added.
+     */
+    protected abstract void addUpdateAnnotation(BodyDeclaration<?> bodyDeclaration);
+
+    /**
+     * Provides the method name of the update method.
+     * @return the method name.
+     */
+    protected abstract String getUpdateMethodName();
+
+    /**
+     * Provides a description of the method.
+     * @param className The classname for which the update method is for.
+     * @return the description.
+     */
+    protected abstract String getDescription(String className);
 
     @Override
     public void addResourceAnnotations() {
@@ -66,7 +85,7 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
         ClassOrInterfaceDeclaration customRepositoryClassOrInterfaceDeclaration =
                 findCustomRepositoryInterface(classOrInterfaceDeclaration);
         if (customRepositoryClassOrInterfaceDeclaration != null) {
-            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration, UPDATE_METHOD,
+            MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration, getUpdateMethodName(),
                     false, domainClassOrInterfaceType.asString());
             if (methodDeclaration != null && !checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
                 methodDeclaration.remove();
@@ -106,21 +125,21 @@ public class UpdateResourceMethodHandler extends ResourceMethodHandler {
         }
         // add missing method
         MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration,
-                UPDATE_METHOD,
+                getUpdateMethodName(),
                 false, domainClassOrInterfaceType.asString());
         if (methodDeclaration == null) {
             methodDeclaration = addInterfaceMethod(customRepositoryClassOrInterfaceDeclaration,
-                    UPDATE_METHOD, domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, UPDATE_METHOD_PARAM))
+                    getUpdateMethodName(), domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, UPDATE_METHOD_PARAM))
                     .setBody(new BlockStmt(new NodeList<>(new ReturnStmt(new NullLiteralExpr())))).setDefault(true);
         }
-        addPUTAnnotation(methodDeclaration);
+        addUpdateAnnotation(methodDeclaration);
         addOperationAnnotation(methodDeclaration,
                 createRequestBodyAnnotation(classOrInterfaceDeclaration),
                 Arrays.asList(
                         createApiResponse204(),
                         createApiResponseAnnotation200WithContent(
                                 classOrInterfaceDeclaration)),
-                String.format("Updates a(n) %s.",
+               getDescription(
                         getSimpleNameFromClass(
                                 getDomainClass(classOrInterfaceDeclaration).asString())));
 
