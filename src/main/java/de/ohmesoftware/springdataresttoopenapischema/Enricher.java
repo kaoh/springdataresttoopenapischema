@@ -45,24 +45,32 @@ public class Enricher {
     private Set<String> excludes;
 
     /**
+     * Disables the PUT command.
+     */
+    private boolean disabledPut;
+
+    /**
      * Constructor.
      *
      * @param sourcePath The source path to enrich.
      * @param includes   The includes.
      * @param excludes   The excludes.
+     * @param disablePut Disables the PUT command.
      */
-    public Enricher(String sourcePath, Set<String> includes, Set<String> excludes) {
+    public Enricher(String sourcePath, Set<String> includes, Set<String> excludes, boolean disablePut) {
         this.sourcePath = sourcePath;
         if (sourcePath.endsWith(SLASH)) {
             this.sourcePath = sourcePath.substring(0, sourcePath.length() - 1);
         }
         this.includes = includes;
         this.excludes = excludes;
+        this.disabledPut = disablePut;
     }
 
     private static final String EXCLUDES_OPT = "-excludes";
     private static final String INCLUDES_OPT = "-includes";
     private static final String SOURCE_OPT = "-sourcePath";
+    private static final String DISABLED_PUT = "-disabledPUT";
 
     public static void main(String[] args) {
         if (args == null || args.length == 0) {
@@ -72,11 +80,21 @@ public class Enricher {
         String sourcePath = parseOption(args, SOURCE_OPT, true, null);
         String includes = parseOption(args, INCLUDES_OPT, false, null);
         String excludes = parseOption(args, EXCLUDES_OPT, false, null);
+        boolean disablePut = parseFlag(args, DISABLED_PUT);
         Enricher enricher = new Enricher(sourcePath,
                 includes == null ? null : Arrays.stream(includes.split(INCLUDE_EXCLUDE_SEPARATOR)).map(String::trim).collect(Collectors.toSet()),
-                excludes == null ? null : Arrays.stream(excludes.split(INCLUDE_EXCLUDE_SEPARATOR)).map(String::trim).collect(Collectors.toSet())
+                excludes == null ? null : Arrays.stream(excludes.split(INCLUDE_EXCLUDE_SEPARATOR)).map(String::trim).collect(Collectors.toSet()),
+                disablePut
         );
         enricher.enrich();
+    }
+
+    private static boolean parseFlag(String[] args, String option) {
+        Optional<String> optionArg = Arrays.stream(args).filter(s -> s.equals(option)).findFirst();
+        if (optionArg.isPresent()) {
+            return true;
+        }
+        return false;
     }
 
     private static String parseOption(String[] args, String option, boolean required,
@@ -164,7 +182,8 @@ public class Enricher {
         LOGGER.info(String.format("Handling file: '%s'", path.getFileName().toString()));
         CompilationUnit compilationUnit = ResourceHandler.parseFile(path.toFile());
         String basePath = ResourceHandler.getBaseSourcePath(compilationUnit, sourcePath);
-        DomainResourceHandler domainResourceHandler = new DomainResourceHandler(path.toString(), sourcePath, basePath, compilationUnit);
+        DomainResourceHandler domainResourceHandler = new DomainResourceHandler(path.toString(), sourcePath, basePath,
+                compilationUnit, disabledPut);
         domainResourceHandler.addResourceAnnotations();
     }
 

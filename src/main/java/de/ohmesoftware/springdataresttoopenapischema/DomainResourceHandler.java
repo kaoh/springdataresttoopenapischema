@@ -28,8 +28,10 @@ public class DomainResourceHandler extends ResourceHandler {
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
+     * @param disablePut Disabled the PUT command.
      */
-    protected DomainResourceHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+    protected DomainResourceHandler(String sourceFile, String sourcePath, String basePath,
+                                    CompilationUnit compilationUnit, boolean disablePut) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
         resourceMethodHandlers = new ArrayList<>();
         resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
@@ -38,7 +40,9 @@ public class DomainResourceHandler extends ResourceHandler {
         resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new DeleteByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CreateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
-        resourceMethodHandlers.add(new PutResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        if (!disablePut) {
+            resourceMethodHandlers.add(new PutResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        }
         resourceMethodHandlers.add(new PatchResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
     }
 

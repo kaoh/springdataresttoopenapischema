@@ -37,7 +37,7 @@ public class TestEnricher {
 
     @Test
     public void testFindByIdEnrich() throws Exception {
-        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("package de.ohmesoftware.springdataresttoopenapischema.repository;"));
@@ -59,7 +59,8 @@ public class TestEnricher {
 
     @Test
     public void testFindByUsernameEnrich() throws Exception {
-        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))),
+                null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"UserRepository_findByFirstName\", summary = \"Find by username.\", description = \"Escape \\\"Test\\\"\""));
@@ -76,7 +77,8 @@ public class TestEnricher {
 
     @Test
     public void testFindBetweenWithList() throws Exception {
-        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0,
+                UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"UserRepository_findByFirstName\", summary = \"Find by username.\", description = \"Escape \\\"Test\\\"\""));
@@ -93,7 +95,8 @@ public class TestEnricher {
 
     @Test
     public void testRemoveByUsernameEnrich() throws Exception {
-        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0,
+                UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.tags.Tag(name = \"User Methods\""));
@@ -107,7 +110,8 @@ public class TestEnricher {
 
     @Test
     public void testFindersEnrich() throws Exception {
-        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0, UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(UserRepository.class.getPackage().getName().substring(0,
+                UserRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"UserRepository_findAll\", summary = \"Finds all Users and returns the result paginated.\""));
@@ -122,7 +126,8 @@ public class TestEnricher {
 
     @Test
     public void testFooNoExport() throws Exception {
-        Enricher enricher = new Enricher(buildPath(FooRepository.class.getPackage().getName().substring(0, FooRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(FooRepository.class.getPackage().getName().substring(0,
+                FooRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(FooRepository.class.getName()) + ".java")));
         assertFalse(newContent.contains("@javax.ws.rs.GET"));
@@ -133,7 +138,8 @@ public class TestEnricher {
 
     @Test
     public void testFindersEnrichExistingQuerydslFinder() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0,
+                OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findAll\", summary = \"Finds all Organisations and returns the result as array.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: (sort=(name : foo : id : creationDate),(asc : desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) }, responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"Array of an organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))) }) })"));
@@ -144,7 +150,8 @@ public class TestEnricher {
 
     @Test
     public void testCustomFinderListReturned() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0,
+                OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findByCreationDateBetween\", summary = \"Custom finder by CreationDateBetween for startDate,endDate.\", responses = { @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = \"200\", description = \"Array of an organisation.\", content = { @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))), @io.swagger.v3.oas.annotations.media.Content(mediaType = \"application/hal+json;charset=UTF-8\", array = @io.swagger.v3.oas.annotations.media.ArraySchema(schema = @io.swagger.v3.oas.annotations.media.Schema(implementation = Organisation.class))) }) })"));
@@ -153,7 +160,8 @@ public class TestEnricher {
 
     @Test
     public void testCustomFinderPageReturned() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0,
+                OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@io.swagger.v3.oas.annotations.Operation(operationId = \"OrganisationRepository_findByNameContaining\", summary = \"Custom finder by NameContaining for name.\", parameters = { @io.swagger.v3.oas.annotations.Parameter(name = \"sort\", description = \"The sorting criteria(s). Syntax: (sort=(name : foo : id : creationDate),(asc : desc))*\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"page\", description = \"The page number to return.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"size\", description = \"The page size.\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY), @io.swagger.v3.oas.annotations.Parameter(name = \"name\", description = \"No description\", in = io.swagger.v3.oas.annotations.enums.ParameterIn.QUERY) })"));
@@ -162,7 +170,8 @@ public class TestEnricher {
 
     @Test
     public void testDeleteByIdEnricher() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0,
+                OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@javax.ws.rs.DELETE"));
@@ -172,7 +181,8 @@ public class TestEnricher {
 
     @Test
     public void testCreateEnricher() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0,
+                OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(OrganisationRepository.class.getName()) + ".java")));
         assertTrue(newContent.contains("@javax.ws.rs.POST"));
@@ -182,7 +192,7 @@ public class TestEnricher {
 
     @Test
     public void testPutEnricher() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         assertFalse(new File(buildPath(OrganisationRepository.class.getPackage().getName()) + "/CustomOrganisationRepository.java").exists());
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(MyCustomOrganisationRepository.class.getName()) + ".java")));
@@ -195,7 +205,8 @@ public class TestEnricher {
 
     @Test
     public void testPatchEnricher() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))),
+                null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         assertFalse(new File(buildPath(OrganisationRepository.class.getPackage().getName()) + "/CustomOrganisationRepository.java").exists());
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(MyCustomOrganisationRepository.class.getName()) + ".java")));
@@ -208,7 +219,9 @@ public class TestEnricher {
 
     @Test
     public void testPutUserEnricher() throws Exception {
-        Enricher enricher = new Enricher(buildPath(OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))), null, Collections.singleton("**.bak"));
+        Enricher enricher = new Enricher(buildPath(
+                OrganisationRepository.class.getPackage().getName().substring(0, OrganisationRepository.class.getPackage().getName().lastIndexOf("."))),
+                null, Collections.singleton("**.bak"), false);
         enricher.enrich();
         String newContent = IOUtils.toString(new FileReader(new File(buildPath(UserRepository.class.getPackage().getName()) + "/CustomUserRepository.java")));
         assertTrue(newContent.contains("@javax.ws.rs.PUT"));
