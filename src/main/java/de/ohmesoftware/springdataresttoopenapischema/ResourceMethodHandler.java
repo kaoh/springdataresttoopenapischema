@@ -37,6 +37,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String SCHEMA_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Schema";
     protected static final String ARRAY_SCHEMA_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.ArraySchema";
     protected static final String SCHEMA_IMPLEMENTATION = "implementation";
+    protected static final String SCHEMA_REF = "ref";
     protected static final String CONTENT_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.media.Content";
     protected static final String CONTENT_MEDIATYPE = "mediaType";
     protected static final String CONTENT_SCHEMA = "schema";
@@ -89,6 +90,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String ANNOTATION_VALUE = "value";
 
     private static final String CUSTOM_METHOD_BY = "By";
+    private static final String COMPONENTS_SCHEMAS = "#/components/schemas/";
 
     /**
      * Constructor.
@@ -368,6 +370,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         methodDeclaration.addAnnotation(jaxRsProducesAnnotationExpr);
     }
 
+    protected NormalAnnotationExpr createSchemaRefAnnotation(String ref) {
+        return new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
+                new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_REF,
+                        new StringLiteralExpr(COMPONENTS_SCHEMAS +ref)))));
+
+    }
+
     protected NormalAnnotationExpr createSchemaAnnotation(Type domainClassOrInterfaceType) {
         if (domainClassOrInterfaceType.isPrimitiveType()) {
             switch (domainClassOrInterfaceType.asString()) {
@@ -408,7 +417,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         return new NormalAnnotationExpr(getNameFromClass(SCHEMA_ANNOTATION_CLASS),
                 new NodeList<>(Collections.singletonList(new MemberValuePair(SCHEMA_IMPLEMENTATION,
                         new ClassExpr(domainClassOrInterfaceType)))));
-
     }
 
     protected NormalAnnotationExpr createContentAnnotation(NormalAnnotationExpr schemaAnnotationExpr, String mediaType) {
@@ -424,6 +432,10 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected MemberValuePair createContentAnnotationMemberForType(Type classOrInterfaceType, boolean request) {
         NormalAnnotationExpr schemaAnnotationExpr = createSchemaAnnotation(classOrInterfaceType);
+        return createContentAnnotationMember(schemaAnnotationExpr, request);
+    }
+
+    private MemberValuePair createContentAnnotationMember(NormalAnnotationExpr schemaAnnotationExpr, boolean request) {
         NormalAnnotationExpr contentJsonAnnotationExpr = createContentAnnotation(schemaAnnotationExpr, MEDIATYPE_JSON);
         NodeList<Expression> nodes = new NodeList<>(Collections.singletonList(contentJsonAnnotationExpr));
         if (!request) {
@@ -434,6 +446,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 new ArrayInitializerExpr(
                         nodes)
         );
+    }
+
+    protected MemberValuePair createContentAnnotationMemberForRef(String ref, boolean request) {
+        NormalAnnotationExpr schemaAnnotationExpr = createSchemaRefAnnotation(ref);
+        return createContentAnnotationMember(schemaAnnotationExpr, request);
     }
 
     protected MemberValuePair createContentAnnotationMember(ClassOrInterfaceDeclaration classOrInterfaceDeclaration, boolean request) {
@@ -550,7 +567,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 t -> t.get(0)).orElseThrow(() -> new RuntimeException("Collection does not define type."));
     }
 
-    private String getTypeSummary(CompilationUnit compilationUnit, Type classOrInterfaceType) {
+    protected String getTypeSummary(CompilationUnit compilationUnit, Type classOrInterfaceType) {
         if (classOrInterfaceType.isPrimitiveType() || isPrimitiveObject(classOrInterfaceType)) {
             return classOrInterfaceType.isClassOrInterfaceType() ?
                     classOrInterfaceType.asClassOrInterfaceType().getName().getIdentifier() :
@@ -588,6 +605,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                         new MemberValuePair(REQUEST_BODY_API_RESPONSE_DESCRIPTION, new StringLiteralExpr(summary)),
                         createContentAnnotationMemberForType(classOrInterfaceType, true)
                 )));
+    }
+
+    protected NormalAnnotationExpr createApiResponseAnnotation200WithRef(CompilationUnit compilationUnit, String summary, String ref) {
+        return createApiResponseAnnotation20xWithContentAnnotation(200, summary,
+                createContentAnnotationMemberForRef(ref, false));
     }
 
     protected NormalAnnotationExpr createApiResponseAnnotation200WithContentForType(CompilationUnit compilationUnit, Type classOrInterfaceType) {

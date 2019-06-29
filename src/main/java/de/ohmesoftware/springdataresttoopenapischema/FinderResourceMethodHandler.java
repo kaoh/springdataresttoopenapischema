@@ -7,6 +7,7 @@ import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
@@ -25,6 +26,7 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
     private static final String FIND_ALL_METHOD = "findAll";
     private static final String ITERABLE_CLASS = "java.lang.Iterable";
     private static final String PREDICATE_PARAM = "predicate";
+    private static final String PAGE = "Page";
 
     /**
      * Constructor.
@@ -134,18 +136,20 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
             List<NormalAnnotationExpr> responses = null;
             String defaultDescription;
             if (isPageReturnType(methodDeclaration)) {
-                defaultDescription = String.format("Finds all %s%s and returns the result paginated.",
-                        getSimpleNameFromClass(
-                                getDomainClass(classOrInterfaceDeclaration).asString()), PLURAL_S);
-                addJaxRsProducesAnnotation(methodDeclaration, MEDIATYPE_JSON, MEDIATYPE_JSON_HAL);
+                String className = getSimpleNameFromClass(getDomainClass(classOrInterfaceDeclaration).asString());
+                defaultDescription = String.format("Finds all %ss and returns the result paginated.", className);
+                String summary = String.format("Paged view with list of: %s",
+                        getTypeSummary(compilationUnit, getDomainClass(classOrInterfaceDeclaration)));
+                responses = Collections.singletonList(createApiResponseAnnotation200WithRef(compilationUnit, summary,
+                        PAGE +className));
             }
             else {
                 responses = Collections.singletonList(
                         createApiResponseAnnotation200WithContentForType(classOrInterfaceDeclaration.findCompilationUnit().get(),
                                 methodDeclaration.getType()));
-                defaultDescription = String.format("Finds all %s%s and returns the result as array.",
+                defaultDescription = String.format("Finds all %ss and returns the result as array.",
                         getSimpleNameFromClass(
-                                getDomainClass(classOrInterfaceDeclaration).asString()), PLURAL_S);
+                                getDomainClass(classOrInterfaceDeclaration).asString()));
             }
             addOperationAnnotation(methodDeclaration, parameters,
                     null,
