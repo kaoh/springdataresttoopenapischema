@@ -78,7 +78,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     protected static final String SORT_CLASS = "org.springframework.data.domain.Sort";
     protected static final String SORT_PARAM = "sort";
     protected static final String SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS = ".*";
-    protected static final String SEARCH_ATTRIBUTE_OR = " : ";
+    protected static final String SEARCH_ATTRIBUTE_OR = " or ";
     private static final String UNDERSCORE = "_";
 
     protected static final String JSON_PROPERTY_CLASS = "com.fasterxml.jackson.annotation.JsonProperty";
@@ -253,7 +253,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             searchParams.forEach(
                     p ->
                             annotationExprs.add(
-                                    createParameter(p, String.format("%s search criteria. Syntax: %s='value'", p, p))
+                                    createParameter(p, String.format("%s search criteria. Used in SQL like fashion. Syntax: %s=value", p, p))
                             )
             );
             return annotationExprs;
@@ -277,7 +277,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         return
                 Collections.singletonList(
-                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Syntax: (sort=(%s),(asc%sdesc))*",
+                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Can be passed multiple times as query with descending priority. Syntax: sort=(%s),(asc%sdesc)",
                                 String.join(SEARCH_ATTRIBUTE_OR, sortParams), SEARCH_ATTRIBUTE_OR))
                 );
     }

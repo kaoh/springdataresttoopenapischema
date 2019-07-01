@@ -84,7 +84,7 @@ public abstract class ResourceHandler {
      *
      * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
-     * @param basePath        The base path no not include package directories.
+     * @param basePath        The base path not including package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      */
     protected ResourceHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
@@ -107,6 +107,8 @@ public abstract class ResourceHandler {
     }
 
     public static String getBaseSourcePath(CompilationUnit compilationUnit, String sourcePath) {
+        // normalize to unix path separators
+        sourcePath = sourcePath.replace('\\', '/');
         String _package = compilationUnit.getPackageDeclaration().map(p -> p.getName().asString()).orElse(EMPTY_STRING);
         String packagePath = _package.replace(".", SLASH);
         int overlap = 0;
