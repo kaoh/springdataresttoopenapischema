@@ -346,7 +346,11 @@ public abstract class ResourceHandler {
     }
 
     protected String getDomainPath(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
-        return getDomainPath(getDomainClass(classOrInterfaceDeclaration).getName().getIdentifier());
+        ClassOrInterfaceType classOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
+        if (classOrInterfaceType == null) {
+            return null;
+        }
+        return getDomainPath(classOrInterfaceType.getName().getIdentifier());
     }
 
     protected String getDomainPath(String string) {

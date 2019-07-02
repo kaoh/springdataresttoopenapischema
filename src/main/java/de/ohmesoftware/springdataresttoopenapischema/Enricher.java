@@ -70,7 +70,7 @@ public class Enricher {
     private static final String EXCLUDES_OPT = "-excludes";
     private static final String INCLUDES_OPT = "-includes";
     private static final String SOURCE_OPT = "-sourcePath";
-    private static final String DISABLED_PUT = "-disabledPUT";
+    private static final String DISABLED_PUT = "-disablePUT";
 
     public static void main(String[] args) {
         if (args == null || args.length == 0) {

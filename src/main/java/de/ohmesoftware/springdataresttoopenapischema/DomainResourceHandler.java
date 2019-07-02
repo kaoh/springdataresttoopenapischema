@@ -60,6 +60,10 @@ public class DomainResourceHandler extends ResourceHandler {
                 String resourcePath = getResourcePath(restResourceOptional.get());
                 if (resourcePath == null) {
                     resourcePath = getDomainPath(classOrInterfaceDeclaration);
+                    if (resourcePath == null) {
+                        // this means this class has no domain type, this is a special class, skip it
+                        return;
+                    }
                 }
                 // add JAX-RS path annotation
                 addPathAnnotation(classOrInterfaceDeclaration, resourcePath);

@@ -92,6 +92,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     private static final String CUSTOM_METHOD_BY = "By";
     private static final String COMPONENTS_SCHEMAS = "#/components/schemas/";
 
+    protected static final String ID_PATH = "{id}";
+
     /**
      * Constructor.
      *

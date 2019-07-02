@@ -133,6 +133,7 @@ public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler 
                     .setBody(new BlockStmt(new NodeList<>(new ReturnStmt(new NullLiteralExpr())))).setDefault(true);
         }
         addUpdateAnnotation(methodDeclaration);
+        addPathAnnotation(methodDeclaration, ID_PATH);
         addOperationAnnotation(methodDeclaration,
                 createRequestBodyAnnotation(classOrInterfaceDeclaration),
                 Arrays.asList(

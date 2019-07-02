@@ -18,8 +18,6 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
 
     private static final String METHOD_BY_ID_PARAM = "id";
 
-    private static final String ID_PATH = "{id}";
-
     private String methodByIdName;
 
     private boolean returnVoid;
