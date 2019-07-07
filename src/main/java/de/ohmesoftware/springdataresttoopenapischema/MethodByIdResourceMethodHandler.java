@@ -70,6 +70,9 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
 
     private void addMethodByIdOperation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration, methodByIdName, String.class.getName());
+        if (isHidden(methodDeclaration)) {
+            return;
+        }
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             methodDeclaration = null;

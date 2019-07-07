@@ -51,4 +51,8 @@ public class PatchResourceMethodHandler extends UpdateResourceMethodHandler {
         return String.format("Patches a(n) %s.", className);
     }
 
+    @Override
+    protected boolean include200Response() {
+        return false;
+    }
 }

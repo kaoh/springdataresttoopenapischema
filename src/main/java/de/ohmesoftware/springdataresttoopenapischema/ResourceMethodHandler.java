@@ -28,6 +28,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
 
     protected static final String OPERATION_ANNOTATION_CLASS = "io.swagger.v3.oas.annotations.Operation";
     protected static final String OPERATION_SUMMARY = "summary";
+    protected static final String OPERATION_HIDDEN = "hidden";
     protected static final String OPERATION_ID = "operationId";
     protected static final String OPERATION_DESCRIPTION = "description";
     protected static final String OPERATION_REQUEST_BODY = "requestBody";
@@ -755,13 +756,15 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         if (checkIfExtendingCrudInterface(classOrInterfaceDeclaration)) {
             // if a resource annotation was added it is marked as user added method and will not be removed
-            if (!checkResourceAnnotationPresent(methodDeclaration).isPresent()) {
+            if (!checkResourceAnnotationPresent(methodDeclaration).isPresent() && !isHidden(methodDeclaration)) {
                 methodDeclaration.remove();
             }
         }
         // remove Operation annotation and JAX-RS
         removeJaxRsMethodAnnotations(methodDeclaration);
-        removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+        if (!isHidden(methodDeclaration)) {
+            removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+        }
     }
 
     protected void removeQuerydslOperationAnnotationAndMethod(MethodDeclaration methodDeclaration, CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {

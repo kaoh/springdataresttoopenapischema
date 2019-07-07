@@ -413,6 +413,20 @@ public abstract class ResourceHandler {
         return restResourceOptional;
     }
 
+    protected boolean isHidden(BodyDeclaration<? extends BodyDeclaration> bodyDeclaration) {
+        if (bodyDeclaration == null) {
+            return false;
+        }
+        Optional<AnnotationExpr> operationOptional =
+                bodyDeclaration.getAnnotationByName(getSimpleNameFromClass(ResourceMethodHandler.OPERATION_ANNOTATION_CLASS));
+        if (!operationOptional.isPresent()) {
+            return false;
+        }
+        AnnotationExpr operation = operationOptional.get();
+        return operation.isNormalAnnotationExpr() && operation.asNormalAnnotationExpr().getPairs()
+                .stream().filter(p -> p.getName().asString().equals(ResourceMethodHandler.OPERATION_HIDDEN)).findAny().isPresent();
+    }
+
     protected boolean checkResourceExported(AnnotationExpr resource,
                                             boolean repoAnnotationRequired) {
         if (resource.isMarkerAnnotationExpr()) {

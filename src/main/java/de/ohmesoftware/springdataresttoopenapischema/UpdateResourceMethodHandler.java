@@ -13,6 +13,7 @@ import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.utils.Pair;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Resource method handler for update.
@@ -54,6 +55,12 @@ public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler 
      * @return the method name.
      */
     protected abstract String getUpdateMethodName();
+
+    /**
+     * <code>true</code> if a HTTP 200 response is included or only 204.
+     * @return <code>true</code> if a HTTP 200 response is included
+     */
+    protected abstract boolean include200Response();
 
     /**
      * Provides a description of the method.
@@ -127,6 +134,9 @@ public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler 
         MethodDeclaration methodDeclaration = findMethodByMethodNameAndParameters(customRepositoryClassOrInterfaceDeclaration,
                 getUpdateMethodName(),
                 false, domainClassOrInterfaceType.asString());
+        if (isHidden(methodDeclaration)) {
+            return;
+        }
         if (methodDeclaration == null) {
             methodDeclaration = addInterfaceMethod(customRepositoryClassOrInterfaceDeclaration,
                     getUpdateMethodName(), domainClassOrInterfaceType, new Parameter(domainClassOrInterfaceType, UPDATE_METHOD_PARAM))
@@ -136,10 +146,11 @@ public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler 
         addPathAnnotation(methodDeclaration, ID_PATH);
         addOperationAnnotation(methodDeclaration,
                 createRequestBodyAnnotation(classOrInterfaceDeclaration),
-                Arrays.asList(
+                include200Response() ? Arrays.asList(
                         createApiResponse204(),
                         createApiResponseAnnotation200WithContent(
-                                classOrInterfaceDeclaration)),
+                                classOrInterfaceDeclaration)) :
+                        Collections.singletonList(createApiResponse204()),
                getDescription(
                         getSimpleNameFromClass(
                                 getDomainClass(classOrInterfaceDeclaration).asString())));

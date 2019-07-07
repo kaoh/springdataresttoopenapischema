@@ -69,7 +69,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_QUERY_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeJaxRsMethodAnnotations(methodDeclaration);
-            removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            if (!isHidden(methodDeclaration)) {
+                removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            }
             if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
                 saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
             }
@@ -84,6 +86,9 @@ public class CustomRemoveResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomRemoveOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
+        if (isHidden(methodDeclaration)) {
+            return;
+        }
         // check if this method is using a precise class
         if (!isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             // add method to class

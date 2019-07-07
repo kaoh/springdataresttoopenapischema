@@ -36,6 +36,11 @@ public class PutResourceMethodHandler extends UpdateResourceMethodHandler {
     }
 
     @Override
+    protected boolean include200Response() {
+        return true;
+    }
+
+    @Override
     protected String getDescription(String className) {
         return String.format("Updates a(n) %s.", className);
     }

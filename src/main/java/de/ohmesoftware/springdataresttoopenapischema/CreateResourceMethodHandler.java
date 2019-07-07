@@ -66,6 +66,9 @@ public class CreateResourceMethodHandler extends ResourceMethodHandler {
         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         MethodDeclaration methodDeclaration = findClosestMethod(classOrInterfaceDeclaration, SAVE_METHOD,
                 domainClassOrInterfaceType.asString());
+        if (isHidden(methodDeclaration)) {
+            return;
+        }
         // check if this method is using a concrete class
         if (methodDeclaration != null && !isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             methodDeclaration = null;

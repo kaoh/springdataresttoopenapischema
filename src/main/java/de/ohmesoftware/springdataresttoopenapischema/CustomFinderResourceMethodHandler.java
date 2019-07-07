@@ -65,7 +65,9 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
             removeMethodParameterAnnotation(methodDeclaration, JAXRS_QUERY_PARAM_CLASS);
             removeMethodParameterAnnotation(methodDeclaration, PARAMETER_CLASS);
             removeJaxRsMethodAnnotations(methodDeclaration);
-            removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            if (!isHidden(methodDeclaration)) {
+                removeAnnotation(methodDeclaration, OPERATION_ANNOTATION_CLASS);
+            }
             if (!methodDeclaration.getParentNode().get().equals(classOrInterfaceDeclaration)) {
                 saveClassOrInterfaceToFile((ClassOrInterfaceDeclaration) methodDeclaration.getParentNode().get());
             }
@@ -80,6 +82,9 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
     private void addCustomFinderOperation(ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
                                           MethodDeclaration methodDeclaration) {
+        if (isHidden(methodDeclaration)) {
+            return;
+        }
         // check if this method is belonging to a concrete class
         if (!isMethodOfConcreteRepositoryClass(methodDeclaration)) {
             // add method to class the search started
