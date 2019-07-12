@@ -3,8 +3,10 @@ package de.ohmesoftware.springdataresttoopenapischema;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.javadoc.Javadoc;
 import com.github.javaparser.utils.Pair;
 
@@ -107,7 +109,8 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
             classOrInterfaceDeclaration.getMethods().add(methodDeclaration);
         }
         Pair<Boolean, String> exportPathConfig = getResourceConfig(methodDeclaration.getNameAsString(), classOrInterfaceDeclaration,
-                getMethodPath(methodDeclaration), methodDeclaration.getParameter(0).getType());
+                getMethodPath(methodDeclaration),
+                methodDeclaration.getParameters().stream().map(Parameter::getType).toArray(Type[]::new));
         if (exportPathConfig.a) {
             String parameterSummary = methodDeclaration.getParameters().stream().
                     filter(p ->

@@ -225,11 +225,12 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         if (annotation == null) {
             return params;
         }
-        searchDomainClassDeclaration.getAnnotationByName(getSimpleNameFromClass(annotation)).ifPresent(
-                a -> {
-                    if (a.isNormalAnnotationExpr()) {
-                        if (!a.asNormalAnnotationExpr().getPairs().isEmpty()) {
-                            a.asNormalAnnotationExpr().getPairs().stream().filter(
+        Optional<AnnotationExpr> annotationExprOptional = searchDomainClassDeclaration.getAnnotationByName(getSimpleNameFromClass(annotation));
+        if (annotationExprOptional.isPresent()) {
+            AnnotationExpr annotationExpr = annotationExprOptional.get();
+                    if (annotationExpr.isNormalAnnotationExpr()) {
+                        if (!annotationExpr.asNormalAnnotationExpr().getPairs().isEmpty()) {
+                            annotationExpr.asNormalAnnotationExpr().getPairs().stream().filter(
                                     p -> p.getName().asString().equals(
                                             ANNOTATION_VALUE)
                             ).forEach(
@@ -248,7 +249,25 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                         }
                     }
                 }
-        );
+        else {
+            // look into super class
+            for (ClassOrInterfaceType extendedType : searchDomainClassDeclaration.getExtendedTypes()) {
+                Optional<Node> parent = searchDomainClassDeclaration.getParentNode();
+                if (parent.isPresent()) {
+                    Optional<CompilationUnit> compilationUnitOptional = parent.get().findCompilationUnit();
+                    if (compilationUnitOptional.isPresent()) {
+                        CompilationUnit compilationUnit = compilationUnitOptional.get();
+                        if (getSourceFile(compilationUnit, extendedType).exists()) {
+                            TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(
+                                    compilationUnit, extendedType);
+                            return collectStringValuesFromAnnotation(extendTypeDeclaration.asClassOrInterfaceDeclaration(),
+                                    annotation);
+                        }
+                    }
+                }
+
+            }
+        }
         return params;
     }
 
@@ -260,32 +279,6 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     private List<String> getSearchParametersFromClass(ClassOrInterfaceDeclaration searchDomainClassDeclaration,
                                                       String searchableAnnotation) {
         return collectStringValuesFromAnnotation(searchDomainClassDeclaration, searchableAnnotation);
-//        for (FieldDeclaration fieldDeclaration : searchDomainClassDeclaration.getFields()) {
-//            if (isPropertyIgnored(fieldDeclaration)) {
-//                continue;
-//            }
-//            VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
-//            if (variableDeclarator.getType().isPrimitiveType() || isPrimitiveObject(variableDeclarator.getType())) {
-//                params.add(variableDeclarator.getNameAsString());
-//            } else if (!variableDeclarator.getType().isArrayType() && isSourceCodeAvailableForClassOrInterface(searchDomainClassDeclaration, variableDeclarator.getType())) {
-//                if (isEnumProperty(searchDomainClassDeclaration.findCompilationUnit().get(),
-//                        variableDeclarator.getType())) {
-//                    params.add(variableDeclarator.getNameAsString());
-//                } else if (!isCollectionObject(variableDeclarator.getType())) {
-//                    params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
-//                }
-//            }
-//        }
-//        for (ClassOrInterfaceType extent : searchDomainClassDeclaration.getExtendedTypes()) {
-//            // visit interface to get information
-//            if (searchDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
-//                    searchDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
-//                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(searchDomainClassDeclaration.findCompilationUnit().get(),
-//                        extent);
-//                params.addAll(getSearchParametersFromClass(extendTypeDeclaration.asClassOrInterfaceDeclaration(), searchableAnnotation));
-//            }
-//        }
-//        return params;
     }
 
     protected List<NormalAnnotationExpr> getPredicateParams(MethodDeclaration methodDeclaration,
@@ -298,7 +291,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             searchParams.forEach(
                     p ->
                             annotationExprs.add(
-                                    createParameter(p, String.format("%s search criteria. Used in SQL like fashion. Syntax: %s=value", p, p))
+                                    createParameter(p, String.format("%s search criteria.", p))
                             )
             );
             return annotationExprs;
@@ -324,11 +317,11 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         return
                 Collections.singletonList(
-                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Can be passed multiple times as query with descending priority. " +
+                        createParameter(SORT_PARAM, String.format("The sorting criteria. Multiple search criteria can be passed with the query with descending priority. Supported are: " +
                                         "<ul>" +
                                         "%s" +
                                         "</ul>",
-                                sortParams.stream().map(s -> String.format("<li>Syntax: sort=%s,(asc or desc)</li>", s)).collect(Collectors.joining())
+                                sortParams.stream().map(s -> String.format("<li><i>sort=%s</i> followed by a comma (,) and either <i>asc</i> or <i>desc</i></li>", s)).collect(Collectors.joining())
                    ))
                 );
     }
@@ -787,6 +780,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
             methodResource = findClosestMethodResourceAnnotation(classOrInterfaceDeclaration,
                     methodName, Arrays.stream(parameterClassTypes).map(Type::asString).toArray(String[]::new));
         }
+
         boolean exported = true;
         String methodPath = defaultPath;
         if (methodResource != null) {
