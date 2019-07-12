@@ -200,12 +200,14 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     // Operation annotations
 
     protected List<NormalAnnotationExpr> getPageableParams(MethodDeclaration methodDeclaration,
-                                                           ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
+                                                           ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration,
+                                                           String sortableAnnotation) {
         return methodDeclaration.getParameters().stream().filter(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))).
                 findFirst().
                 map(p -> {
-                            List<NormalAnnotationExpr> annotationExprs = new ArrayList<>(addSortParams(sortingDomainClassOrInterfaceDeclaration));
+                            List<NormalAnnotationExpr> annotationExprs = new ArrayList<>(addSortParams(sortingDomainClassOrInterfaceDeclaration,
+                                    sortableAnnotation));
                             annotationExprs.addAll(
                                     Arrays.asList(
                                             createParameter(PAGE_PARAMETER_NAME, "The page number to return."),
@@ -217,39 +219,79 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
                 orElse(Collections.emptyList());
     }
 
-    private List<String> getSearchParametersFromClass(ClassOrInterfaceDeclaration searchDomainClassDeclaration) {
+    private List<String> collectStringValuesFromAnnotation(ClassOrInterfaceDeclaration searchDomainClassDeclaration,
+                                                           String annotation) {
         List<String> params = new ArrayList<>();
-        for (FieldDeclaration fieldDeclaration : searchDomainClassDeclaration.getFields()) {
-            if (isPropertyIgnored(fieldDeclaration)) {
-                continue;
-            }
-            VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
-            if (variableDeclarator.getType().isPrimitiveType() || isPrimitiveObject(variableDeclarator.getType())) {
-                params.add(variableDeclarator.getNameAsString());
-            } else if (!variableDeclarator.getType().isArrayType() && isSourceCodeAvailableForClassOrInterface(searchDomainClassDeclaration, variableDeclarator.getType())) {
-                if (isEnumProperty(searchDomainClassDeclaration.findCompilationUnit().get(),
-                        variableDeclarator.getType())) {
-                    params.add(variableDeclarator.getNameAsString());
-                } else if (!isCollectionObject(variableDeclarator.getType())) {
-                    params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
+        if (annotation == null) {
+            return params;
+        }
+        searchDomainClassDeclaration.getAnnotationByName(getSimpleNameFromClass(annotation)).ifPresent(
+                a -> {
+                    if (a.isNormalAnnotationExpr()) {
+                        if (!a.asNormalAnnotationExpr().getPairs().isEmpty()) {
+                            a.asNormalAnnotationExpr().getPairs().stream().filter(
+                                    p -> p.getName().asString().equals(
+                                            ANNOTATION_VALUE)
+                            ).forEach(
+                                    p -> {
+                                        Expression value = p.getValue();
+                                        if (value.isStringLiteralExpr()) {
+                                            params.add(value.asStringLiteralExpr().getValue());
+                                        }
+                                        if (value.isArrayInitializerExpr()) {
+                                            params.addAll(value.asArrayInitializerExpr().getValues().stream().filter(
+                                                    Expression::isStringLiteralExpr
+                                            ).map( v -> v.asStringLiteralExpr().asString()).collect(Collectors.toList()));
+                                        }
+                                    }
+                            );
+                        }
+                    }
                 }
-            }
-        }
-        for (ClassOrInterfaceType extent : searchDomainClassDeclaration.getExtendedTypes()) {
-            // visit interface to get information
-            if (searchDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
-                    searchDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
-                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(searchDomainClassDeclaration.findCompilationUnit().get(),
-                        extent);
-                params.addAll(getSearchParametersFromClass(extendTypeDeclaration.asClassOrInterfaceDeclaration()));
-            }
-        }
+        );
         return params;
     }
 
+    private List<String> getSortParametersFromClass(ClassOrInterfaceDeclaration searchDomainClassDeclaration,
+                                                      String sortableAnnotation) {
+        return collectStringValuesFromAnnotation(searchDomainClassDeclaration, sortableAnnotation);
+    }
+
+    private List<String> getSearchParametersFromClass(ClassOrInterfaceDeclaration searchDomainClassDeclaration,
+                                                      String searchableAnnotation) {
+        return collectStringValuesFromAnnotation(searchDomainClassDeclaration, searchableAnnotation);
+//        for (FieldDeclaration fieldDeclaration : searchDomainClassDeclaration.getFields()) {
+//            if (isPropertyIgnored(fieldDeclaration)) {
+//                continue;
+//            }
+//            VariableDeclarator variableDeclarator = fieldDeclaration.getVariables().get(0);
+//            if (variableDeclarator.getType().isPrimitiveType() || isPrimitiveObject(variableDeclarator.getType())) {
+//                params.add(variableDeclarator.getNameAsString());
+//            } else if (!variableDeclarator.getType().isArrayType() && isSourceCodeAvailableForClassOrInterface(searchDomainClassDeclaration, variableDeclarator.getType())) {
+//                if (isEnumProperty(searchDomainClassDeclaration.findCompilationUnit().get(),
+//                        variableDeclarator.getType())) {
+//                    params.add(variableDeclarator.getNameAsString());
+//                } else if (!isCollectionObject(variableDeclarator.getType())) {
+//                    params.add(variableDeclarator.getNameAsString() + SINGLE_OBJECT_SEARCH_PARAM_ELLIPSIS);
+//                }
+//            }
+//        }
+//        for (ClassOrInterfaceType extent : searchDomainClassDeclaration.getExtendedTypes()) {
+//            // visit interface to get information
+//            if (searchDomainClassDeclaration.findCompilationUnit().isPresent() && getSourceFile(
+//                    searchDomainClassDeclaration.findCompilationUnit().get(), extent).exists()) {
+//                TypeDeclaration extendTypeDeclaration = parseClassOrInterfaceType(searchDomainClassDeclaration.findCompilationUnit().get(),
+//                        extent);
+//                params.addAll(getSearchParametersFromClass(extendTypeDeclaration.asClassOrInterfaceDeclaration(), searchableAnnotation));
+//            }
+//        }
+//        return params;
+    }
+
     protected List<NormalAnnotationExpr> getPredicateParams(MethodDeclaration methodDeclaration,
-                                                            ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration) {
-        List<String> searchParams = getSearchParametersFromClass(predicateDomainClassOrInterfaceDeclaration);
+                                                            ClassOrInterfaceDeclaration predicateDomainClassOrInterfaceDeclaration,
+                                                            String searchableAnnotation) {
+        List<String> searchParams = getSearchParametersFromClass(predicateDomainClassOrInterfaceDeclaration, searchableAnnotation);
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS)))) {
             List<NormalAnnotationExpr> annotationExprs = new ArrayList<>();
@@ -265,23 +307,29 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected List<NormalAnnotationExpr> getSortParams(MethodDeclaration methodDeclaration,
-                                                       ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
+                                                       ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration,
+                                                       String sortableAnnotation) {
         if (methodDeclaration.getParameters().stream().anyMatch(p ->
                 p.getType().asString().endsWith(getSimpleNameFromClass(SORT_CLASS)))) {
-            return addSortParams(sortingDomainClassOrInterfaceDeclaration);
+            return addSortParams(sortingDomainClassOrInterfaceDeclaration, sortableAnnotation);
         }
         return Collections.emptyList();
     }
 
-    protected List<NormalAnnotationExpr> addSortParams(ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration) {
-        List<String> sortParams = getSearchParametersFromClass(sortingDomainClassOrInterfaceDeclaration);
+    protected List<NormalAnnotationExpr> addSortParams(ClassOrInterfaceDeclaration sortingDomainClassOrInterfaceDeclaration,
+                                                       String sortableAnnotation) {
+        List<String> sortParams = getSortParametersFromClass(sortingDomainClassOrInterfaceDeclaration, sortableAnnotation);
         if (sortParams.isEmpty()) {
             return Collections.emptyList();
         }
         return
                 Collections.singletonList(
-                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Can be passed multiple times as query with descending priority. Syntax: sort=(%s),(asc%sdesc)",
-                                String.join(SEARCH_ATTRIBUTE_OR, sortParams), SEARCH_ATTRIBUTE_OR))
+                        createParameter(SORT_PARAM, String.format("The sorting criteria(s). Can be passed multiple times as query with descending priority. " +
+                                        "<ul>" +
+                                        "%s" +
+                                        "</ul>",
+                                sortParams.stream().map(s -> String.format("<li>Syntax: sort=%s,(asc or desc)</li>", s)).collect(Collectors.joining())
+                   ))
                 );
     }
 
@@ -295,7 +343,8 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
     }
 
     protected List<NormalAnnotationExpr> getPageableSortingAndPredicateParameterAnnotations(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration,
-                                                                                            List<String> methodParameterClasses) {
+                                                                                            List<String> methodParameterClasses,
+                                                                                            String searchableAnnotation, String sortableAnnotation) {
         List<NormalAnnotationExpr> parameters = new ArrayList<>();
         TypeDeclaration extendTypeDeclaration =
                 parseClassOrInterfaceType(classOrInterfaceDeclaration.findCompilationUnit().get(),
@@ -303,13 +352,13 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         for (String paramClass : methodParameterClasses) {
             if (paramClass.endsWith(getSimpleNameFromClass(PAGEABLE_CLASS))) {
                 parameters.addAll(getPageableParams(methodDeclaration,
-                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration(), sortableAnnotation));
             } else if (paramClass.endsWith(getSimpleNameFromClass(QUERYDSL_PREDICATE_CLASS))) {
                 parameters.addAll(getPredicateParams(methodDeclaration,
-                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration(), searchableAnnotation));
             } else if (paramClass.endsWith(getSimpleNameFromClass(SORT_CLASS))) {
                 parameters.addAll(getSortParams(methodDeclaration,
-                        extendTypeDeclaration.asClassOrInterfaceDeclaration()));
+                        extendTypeDeclaration.asClassOrInterfaceDeclaration(), sortableAnnotation));
             }
         }
         return parameters;

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author <a href="mailto:k_o_@users.sourceforge.net">Karsten Ohme
  * (k_o_@users.sourceforge.net)</a>
  */
+@Searchable(value = {"username", "emailAddress"})
 public class User extends Base {
 
     /**

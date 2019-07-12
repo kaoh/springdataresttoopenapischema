@@ -108,10 +108,10 @@ public abstract class MethodByIdResourceMethodHandler extends ResourceMethodHand
                 addPathAnnotation(methodDeclaration, methodPath);
             }
             addPathParamAnnotation(methodDeclaration, METHOD_BY_ID_PARAM, true, "The database id.");
-            additionalMethodByIdOperation(methodDeclaration, classOrInterfaceDeclaration);
+            addMethodByIdOperation(methodDeclaration, classOrInterfaceDeclaration);
         }
     }
 
-    protected abstract void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration);
+    protected abstract void addMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration);
 
 }

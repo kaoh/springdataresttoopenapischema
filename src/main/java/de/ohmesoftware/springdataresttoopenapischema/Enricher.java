@@ -29,6 +29,13 @@ public class Enricher {
 
     private static final String SLASH = "/";
 
+    private static final String EXCLUDES_OPT = "-excludes";
+    private static final String INCLUDES_OPT = "-includes";
+    private static final String SOURCE_OPT = "-sourcePath";
+    private static final String DISABLED_PUT = "-disablePUT";
+    private static final String SORTABLE_ANNOTATION = "-sortableAnnotation";
+    private static final String SEARCHABLE_ANNOTATION = "-searchableAnnotation";
+
     /**
      * The source path to enrich.
      */
@@ -50,14 +57,27 @@ public class Enricher {
     private boolean disabledPut;
 
     /**
+     * The Sortable annotation.
+     */
+    private String sortableAnnotation;
+
+    /**
+     * The Searchable annotation.
+     */
+    private String searchableAnnotation;
+
+    /**
      * Constructor.
      *
      * @param sourcePath The source path to enrich.
      * @param includes   The includes.
      * @param excludes   The excludes.
      * @param disablePut Disables the PUT command.
+     * @param searchableAnnotation The searchable annotation.
+     * @param sortableAnnotation The sortable annotation.
      */
-    public Enricher(String sourcePath, Set<String> includes, Set<String> excludes, boolean disablePut) {
+    public Enricher(String sourcePath, Set<String> includes, Set<String> excludes, boolean disablePut,
+                    String searchableAnnotation, String sortableAnnotation) {
         this.sourcePath = sourcePath;
         if (sourcePath.endsWith(SLASH)) {
             this.sourcePath = sourcePath.substring(0, sourcePath.length() - 1);
@@ -65,12 +85,10 @@ public class Enricher {
         this.includes = includes;
         this.excludes = excludes;
         this.disabledPut = disablePut;
+        this.searchableAnnotation = searchableAnnotation;
+        this.sortableAnnotation = sortableAnnotation;
     }
 
-    private static final String EXCLUDES_OPT = "-excludes";
-    private static final String INCLUDES_OPT = "-includes";
-    private static final String SOURCE_OPT = "-sourcePath";
-    private static final String DISABLED_PUT = "-disablePUT";
 
     public static void main(String[] args) {
         if (args == null || args.length == 0) {
@@ -80,11 +98,14 @@ public class Enricher {
         String sourcePath = parseOption(args, SOURCE_OPT, true, null);
         String includes = parseOption(args, INCLUDES_OPT, false, null);
         String excludes = parseOption(args, EXCLUDES_OPT, false, null);
+        String sortableAnnotation = parseOption(args, SORTABLE_ANNOTATION, false, null);
+        String searchableAnnotation = parseOption(args, SEARCHABLE_ANNOTATION, false, null);
         boolean disablePut = parseFlag(args, DISABLED_PUT);
         Enricher enricher = new Enricher(sourcePath,
                 includes == null ? null : Arrays.stream(includes.split(INCLUDE_EXCLUDE_SEPARATOR)).map(String::trim).collect(Collectors.toSet()),
                 excludes == null ? null : Arrays.stream(excludes.split(INCLUDE_EXCLUDE_SEPARATOR)).map(String::trim).collect(Collectors.toSet()),
-                disablePut
+                disablePut,
+                searchableAnnotation, sortableAnnotation
         );
         enricher.enrich();
     }
@@ -183,7 +204,7 @@ public class Enricher {
         CompilationUnit compilationUnit = ResourceHandler.parseFile(path.toFile());
         String basePath = ResourceHandler.getBaseSourcePath(compilationUnit, sourcePath);
         DomainResourceHandler domainResourceHandler = new DomainResourceHandler(path.toString(), sourcePath, basePath,
-                compilationUnit, disabledPut);
+                compilationUnit, disabledPut, searchableAnnotation, sortableAnnotation);
         domainResourceHandler.addResourceAnnotations();
     }
 

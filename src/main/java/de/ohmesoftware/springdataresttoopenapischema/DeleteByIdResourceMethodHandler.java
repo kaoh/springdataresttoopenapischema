@@ -29,7 +29,7 @@ public class DeleteByIdResourceMethodHandler extends MethodByIdResourceMethodHan
     }
 
     @Override
-    protected void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected void addMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         addDELETEAnnotation(methodDeclaration);
         addOperationAnnotation(methodDeclaration,
                 null,

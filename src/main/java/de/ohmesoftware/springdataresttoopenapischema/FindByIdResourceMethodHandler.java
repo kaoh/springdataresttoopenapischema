@@ -29,7 +29,7 @@ public class FindByIdResourceMethodHandler extends MethodByIdResourceMethodHandl
     }
 
     @Override
-    protected void additionalMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected void addMethodByIdOperation(MethodDeclaration methodDeclaration, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         addGETAnnotation(methodDeclaration);
         addOperationAnnotation(methodDeclaration,
                 null,

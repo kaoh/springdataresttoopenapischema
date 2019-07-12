@@ -7,7 +7,6 @@ import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.expr.NormalAnnotationExpr;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.utils.Pair;
 
 import java.util.ArrayList;
@@ -29,15 +28,31 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
     private static final String PAGE = "Page";
 
     /**
+     * The Sortable annotation.
+     */
+    private String sortableAnnotation;
+
+    /**
+     * The Searchable annotation.
+     */
+    private String searchableAnnotation;
+
+    /**
      * Constructor.
      *
      * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
+     * @param searchableAnnotation The searchable annotation.
+     * @param sortableAnnotation The sortable annotation.
      */
-    protected FinderResourceMethodHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+    protected FinderResourceMethodHandler(String sourceFile, String sourcePath, String basePath,
+                                          CompilationUnit compilationUnit,
+    String searchableAnnotation, String sortableAnnotation) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
+        this.searchableAnnotation = searchableAnnotation;
+        this.sortableAnnotation = sortableAnnotation;
     }
 
     @Override
@@ -131,9 +146,9 @@ public class FinderResourceMethodHandler extends ResourceMethodHandler {
                 addPathAnnotation(classOrInterfaceDeclaration, methodPath);
             }
             List<NormalAnnotationExpr> parameters = getPageableSortingAndPredicateParameterAnnotations(methodDeclaration,
-                    classOrInterfaceDeclaration, params);
+                    classOrInterfaceDeclaration, params, searchableAnnotation, sortableAnnotation);
             addGETAnnotation(methodDeclaration);
-            List<NormalAnnotationExpr> responses = null;
+            List<NormalAnnotationExpr> responses;
             String defaultDescription;
             if (isPageReturnType(methodDeclaration)) {
                 String className = getSimpleNameFromClass(getDomainClass(classOrInterfaceDeclaration).asString());

@@ -26,15 +26,31 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
     private static final String COMMA = ",";
 
     /**
+     * The Sortable annotation.
+     */
+    private String sortableAnnotation;
+
+    /**
+     * The Searchable annotation.
+     */
+    private String searchableAnnotation;
+
+    /**
      * Constructor.
      *
      * @param sourceFile      The source file.
      * @param sourcePath      The source path of the Java sources.
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
+     * @param searchableAnnotation The searchable annotation.
+     * @param sortableAnnotation The sortable annotation.
      */
-    protected CustomFinderResourceMethodHandler(String sourceFile, String sourcePath, String basePath, CompilationUnit compilationUnit) {
+    protected CustomFinderResourceMethodHandler(String sourceFile, String sourcePath, String basePath,
+                                                CompilationUnit compilationUnit,
+                                                String searchableAnnotation, String sortableAnnotation) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
+        this.searchableAnnotation = searchableAnnotation;
+        this.sortableAnnotation = sortableAnnotation;
     }
 
     @Override
@@ -101,7 +117,7 @@ public class CustomFinderResourceMethodHandler extends ResourceMethodHandler {
 
             List<String> params = getMethodParameterTypes(methodDeclaration);
             List<NormalAnnotationExpr> parameters = getPageableSortingAndPredicateParameterAnnotations(methodDeclaration,
-                    classOrInterfaceDeclaration, params);
+                    classOrInterfaceDeclaration, params, searchableAnnotation, sortableAnnotation);
 
             if (parameters.isEmpty()) {
                 methodDeclaration.getParameters().forEach(p ->

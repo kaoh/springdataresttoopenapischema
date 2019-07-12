@@ -7,9 +7,11 @@ setting the Swagger OpenAPI `io.swagger.v3.oas.annotations.Operation` annotation
 
 The library in its current state was created for setting the Operation documentation of Spring Data REST.
 
+* Support for standard, POST, POUT, DELETE, PATCH, QueryDSL and standard PagingAndSortingRepository `findAll` methods
+* PUT can be disabled with the flag `disablePUT`
+
 Limitations:
 
-* PUT for creation is not documented. Workaround: Use POST.
 * Only collection and item method resources are considered.
 * Domain models must be classes. No interfaces are supported. Only fields will be inspected.
 * No inner classes and inner enums are supported.
@@ -39,10 +41,37 @@ and `path` property. This will be honored by this library.
 * Mark overridden methods from the `CrudRepository`, `PagingAndSortingRepository` and `QuerydslPredicateExecutor` with 
   `@RestResource`, otherwise they will be removed in the next run 
 * `findById`, `findAll`, `deleteById`, the create and the update method are using default descriptions if not explicitly defined.
-* Because PUT for updates and POST for creations are using both the `save` method an additional marker method 
-is added for the PUT call. An `T update(T entity)` method is added to a custom repository interface, which is created if it does not exists, yet.
-* Custom repositories can use an arbitrary method namings. Also the returned content and HTTP method cannot be determined. All `Operation`
+* Because `PUT` for updates and POST for creations are using both the `save` method an additional marker method 
+is added for the `PUT` call. An `T update(T entity)` method is added to a custom repository interface, which is created 
+if it does not exists yet. Some applies for `PATCH` calls.
+* Custom repositories can use arbitrary method namings. Also the returned content and HTTP method cannot be determined. All `Operation`
 and JAX-RS annotations must be manually added.
+* Add a proprietary `Searchable` and `Sortable` annotations to define the sort and search parameters and pass this as `searchableAnnotation` 
+and `sortableAnnotation`:
+
+```java
+@Inherited
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Sortable {
+
+    String[] value();
+
+}
+```
+
+```java
+@Inherited
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface Searchable {
+
+    String[] value();
+
+}
+```
 
 ## Library Execution
 
@@ -54,7 +83,7 @@ separators two asterisks have to be used.
 
 ```
 Enricher enricher = new Enricher(buildPath(User.class.getPackage().getName()),
-            Collections.singleton("**UserRepository.java"), Collections.singleton("**.bak"));
+            Collections.singleton("**UserRepository.java"), Collections.singleton("**.bak"), false, null, null);
 enricher.enrich();
 ```
 
@@ -83,6 +112,10 @@ enricher.enrich();
             <argument>**.bak</argument>
             <argument>-includes</argument>
             <argument>**UserRepository.java</argument>
+            <argument>-searchableAnnotation</argument>
+            <argument>my.path.Searchable</argument>
+            <argument>-sortableAnnotation</argument>
+            <argument>my.path.Searchable</argument>
           </arguments>
         </configuration>
         <dependencies>

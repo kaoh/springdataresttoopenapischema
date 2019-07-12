@@ -29,15 +29,22 @@ public class DomainResourceHandler extends ResourceHandler {
      * @param basePath        The base path no not include package directories.
      * @param compilationUnit The compilation unit to enrich with annotations.
      * @param disablePut Disabled the PUT command.
+     * @param searchableAnnotation The searchable annotation.
+     * @param sortableAnnotation The sortable annotation.
      */
     protected DomainResourceHandler(String sourceFile, String sourcePath, String basePath,
-                                    CompilationUnit compilationUnit, boolean disablePut) {
+                                    CompilationUnit compilationUnit, boolean disablePut,
+                                    String searchableAnnotation, String sortableAnnotation) {
         super(sourceFile, sourcePath, basePath, compilationUnit);
         resourceMethodHandlers = new ArrayList<>();
         resourceMethodHandlers.add(new FindByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
-        resourceMethodHandlers.add(new CustomFinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new CustomFinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit,
+                searchableAnnotation,
+                sortableAnnotation));
         resourceMethodHandlers.add(new CustomRemoveResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
-        resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
+        resourceMethodHandlers.add(new FinderResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit,
+                searchableAnnotation,
+                sortableAnnotation));
         resourceMethodHandlers.add(new DeleteByIdResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         resourceMethodHandlers.add(new CreateResourceMethodHandler(sourceFile, sourcePath, basePath, compilationUnit));
         if (!disablePut) {
