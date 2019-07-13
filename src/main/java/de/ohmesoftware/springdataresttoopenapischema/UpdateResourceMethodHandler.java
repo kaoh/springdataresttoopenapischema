@@ -101,7 +101,7 @@ public abstract class UpdateResourceMethodHandler extends ResourceMethodHandler 
         }
     }
 
-    private void addUpdateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
+    protected void addUpdateOperation(CompilationUnit compilationUnit, ClassOrInterfaceDeclaration classOrInterfaceDeclaration) {
         ClassOrInterfaceType domainClassOrInterfaceType = getDomainClass(classOrInterfaceDeclaration);
         // check if save method is exported
         Pair<Boolean, String> exportPathConfig = getResourceConfig(SAVE_METHOD, classOrInterfaceDeclaration, null, domainClassOrInterfaceType);
