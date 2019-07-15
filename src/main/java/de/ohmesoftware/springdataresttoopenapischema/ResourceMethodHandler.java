@@ -317,7 +317,7 @@ public abstract class ResourceMethodHandler extends ResourceHandler {
         }
         return
                 Collections.singletonList(
-                        createParameter(SORT_PARAM, String.format("The sorting criteria. Multiple search criteria can be passed with the query with descending priority. Supported are: " +
+                        createParameter(SORT_PARAM, String.format("The sorting criteria. Multiple sort criteria can be passed with the query with descending priority. Supported are: " +
                                         "<ul>" +
                                         "%s" +
                                         "</ul>",
